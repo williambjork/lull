@@ -52,6 +52,7 @@ final class AppModel {
             loadError = "Couldn't read saved sleep data."
         }
         reloadBabyAvatar()
+        ScreenshotCapture.seedDemoData(into: self)
         refreshDerived()
         startTicking()
     }
