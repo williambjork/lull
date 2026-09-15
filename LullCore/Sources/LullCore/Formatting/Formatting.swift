@@ -129,14 +129,6 @@ public enum SleepCopy {
         }
     }
 
-    /// Context, never a verdict on a single day.
-    public static func totalSleepContext(_ totals: SleepTotals) -> String {
-        let range = totals.recommendedRange
-        return "Babies this age often sleep "
-            + DurationFormatting.approximateHourRange(minMinutes: range.minMinutes, maxMinutes: range.maxMinutes)
-            + " in 24 hours. One day on its own doesn't mean much."
-    }
-
     public static func cueLabel(_ cue: SleepCue) -> String {
         switch cue {
         case .yawning: "Yawning"

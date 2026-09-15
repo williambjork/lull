@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import LullCore
 
 /// A deliberately quiet palette: this app gets used at 03:00 in a dark room.
@@ -17,13 +18,99 @@ enum Theme {
     }
 
     static func backgroundGradient(isSleeping: Bool) -> LinearGradient {
-        LinearGradient(
-            colors: isSleeping
-                ? [Color(red: 0.06, green: 0.08, blue: 0.20), background]
-                : [Color(red: 0.13, green: 0.10, blue: 0.16), background],
-            startPoint: .top,
-            endPoint: .bottom
+        atmosphereGradient(mood: isSleeping ? .asleep : .idle, phase: 0)
+    }
+
+    // MARK: - Atmosphere tokens
+
+    /// Top-stop colors for `AtmosphereBackground` (base stays `background`).
+    static let atmosphereIdleTop = Color(red: 0.13, green: 0.10, blue: 0.16)
+    static let atmosphereIdleTopDrift = Color(red: 0.15, green: 0.11, blue: 0.18)
+    static let atmosphereAsleepTop = Color(red: 0.06, green: 0.08, blue: 0.20)
+    static let atmosphereAsleepTopDrift = Color(red: 0.07, green: 0.10, blue: 0.24)
+    static let atmosphereNightTop = Color(red: 0.04, green: 0.05, blue: 0.14)
+    static let atmosphereNightTopDrift = Color(red: 0.05, green: 0.06, blue: 0.18)
+
+    static let atmosphereGrainOpacity: Double = 0.028
+
+    static func atmosphereGradient(mood: AtmosphereMood, phase: Double) -> LinearGradient {
+        let (a, b) = atmosphereTopPair(mood: mood)
+        let t = softWave(phase)
+        let top = blend(a, b, t: t)
+        let bottom = blend(background, a.opacity(0.35), t: t * 0.25)
+        return LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
+    }
+
+    static func atmosphereBlobColor(mood: AtmosphereMood, phase: Double) -> Color {
+        let t = softWave(phase + 0.25)
+        switch mood {
+        case .idle:
+            return blend(awakeAccent.opacity(0.22), awakeAccent.opacity(0.14), t: t)
+        case .asleep:
+            return blend(asleepAccent.opacity(0.20), asleepAccent.opacity(0.12), t: t)
+        case .night:
+            return blend(
+                Color(red: 0.35, green: 0.45, blue: 0.85).opacity(0.16),
+                asleepAccent.opacity(0.10),
+                t: t
+            )
+        }
+    }
+
+    static func atmosphereBlobOpacity(mood: AtmosphereMood) -> Double {
+        switch mood {
+        case .idle: 0.55
+        case .asleep: 0.50
+        case .night: 0.42
+        }
+    }
+
+    static func atmosphereBlobScale(mood: AtmosphereMood) -> CGFloat {
+        switch mood {
+        case .idle: 0.72
+        case .asleep: 0.78
+        case .night: 0.85
+        }
+    }
+
+    private static func atmosphereTopPair(mood: AtmosphereMood) -> (Color, Color) {
+        switch mood {
+        case .idle: (atmosphereIdleTop, atmosphereIdleTopDrift)
+        case .asleep: (atmosphereAsleepTop, atmosphereAsleepTopDrift)
+        case .night: (atmosphereNightTop, atmosphereNightTopDrift)
+        }
+    }
+
+    private static func softWave(_ phase: Double) -> Double {
+        0.5 + 0.5 * sin(phase * .pi * 2)
+    }
+
+    private static func blend(_ a: Color, _ b: Color, t: Double) -> Color {
+        let u = max(0, min(1, t))
+        return a.mix(with: b, by: u)
+    }
+}
+
+private extension Color {
+    /// Cheap RGB mix — good enough for near-navy atmosphere stops.
+    func mix(with other: Color, by t: Double) -> Color {
+        let u = max(0, min(1, t))
+        #if canImport(UIKit)
+        let left = UIColor(self)
+        let right = UIColor(other)
+        var lr: CGFloat = 0, lg: CGFloat = 0, lb: CGFloat = 0, la: CGFloat = 0
+        var rr: CGFloat = 0, rg: CGFloat = 0, rb: CGFloat = 0, ra: CGFloat = 0
+        left.getRed(&lr, green: &lg, blue: &lb, alpha: &la)
+        right.getRed(&rr, green: &rg, blue: &rb, alpha: &ra)
+        return Color(
+            red: Double(lr + (rr - lr) * u),
+            green: Double(lg + (rg - lg) * u),
+            blue: Double(lb + (rb - lb) * u),
+            opacity: Double(la + (ra - la) * u)
         )
+        #else
+        return u < 0.5 ? self : other
+        #endif
     }
 }
 

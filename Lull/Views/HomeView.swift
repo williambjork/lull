@@ -11,33 +11,27 @@ struct HomeView: View {
     @State private var showingWakeTimeSheet = false
 
     var body: some View {
-        ZStack {
-            Theme.backgroundGradient(isSleeping: model.isSleeping).ignoresSafeArea()
+        ScrollView {
+            VStack(spacing: 16) {
+                header
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    header
-
-                    if model.isSleeping {
-                        sleepingCard
-                    } else {
-                        awakeCard
-                    }
-
-                    ForEach(model.trends) { signal in
-                        TrendBanner(signal: signal)
-                    }
-
-                    if let totals = model.totals {
-                        TotalsCard(totals: totals)
-                    }
-
-                    RecentSleepsCard()
+                if model.isSleeping {
+                    sleepingCard
+                } else {
+                    awakeCard
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+
+                ForEach(model.trends) { signal in
+                    TrendBanner(signal: signal)
+                }
+
+                RecentSleepsCard()
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
         }
+        .background { AtmosphereBackground(mood: model.atmosphereMood) }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
         .sheet(isPresented: $showingStartSheet) {
             StartSleepSheet()
@@ -65,10 +59,14 @@ struct HomeView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 12) {
+            BabyAvatarButton(size: 44, showsEditBadge: false)
+
             Text(model.babyName)
                 .font(.title3.weight(.semibold))
+
             Spacer()
+
             if let ages = model.ages {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(SleepCopy.ageDescription(ages.effective))
@@ -226,45 +224,6 @@ struct PredictionBlock: View {
     private var headline: String {
         let title = SleepCopy.nextSleepTitle(prediction)
         return "\(SleepCopy.predictionHeadline) · \(title)"
-    }
-}
-
-// MARK: - Totals
-
-struct TotalsCard: View {
-    let totals: SleepTotals
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Sleep today")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.secondaryText)
-
-            Text(DurationFormatting.compact(totals.todayTotalMinutes))
-                .font(.system(size: 30, weight: .semibold, design: .rounded))
-
-            HStack(spacing: 28) {
-                statistic("Night", minutes: totals.nightSleepMinutes)
-                statistic("Naps", minutes: totals.daytimeSleepMinutes)
-                statistic("Last 24h", minutes: totals.totalSleep24hMinutes)
-            }
-
-            Text(SleepCopy.totalSleepContext(totals))
-                .font(.caption)
-                .foregroundStyle(Theme.tertiaryText)
-        }
-        .card()
-    }
-
-    private func statistic(_ label: String, minutes: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(Theme.tertiaryText)
-            Text(DurationFormatting.compact(minutes))
-                .font(.callout.weight(.medium))
-                .monospacedDigit()
-        }
     }
 }
 

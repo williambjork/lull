@@ -9,18 +9,6 @@ struct InsightsView: View {
     var body: some View {
         NavigationStack {
             List {
-                if let totals = model.totals {
-                    Section("Sleep today") {
-                        row("Total", DurationFormatting.compact(totals.todayTotalMinutes))
-                        row("Night", DurationFormatting.compact(totals.nightSleepMinutes))
-                        row("Naps", DurationFormatting.compact(totals.daytimeSleepMinutes))
-                        row("Rolling 24 hours", DurationFormatting.compact(totals.totalSleep24hMinutes))
-                        Text(SleepCopy.totalSleepContext(totals))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
                 if let prior = model.agePrior {
                     Section("Typical for this age") {
                         row(

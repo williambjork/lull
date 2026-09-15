@@ -10,49 +10,47 @@ struct SleepSummarySheet: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Theme.backgroundGradient(isSleeping: false).ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 26) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(SleepCopy.eventTitle(result.event))
+                        .font(.title3.weight(.semibold))
+                    Text(DurationFormatting.compact(result.event.durationMinutes ?? 0))
+                        .font(.system(size: 44, weight: .semibold, design: .rounded))
+                }
 
-                VStack(alignment: .leading, spacing: 26) {
+                if let window = result.event.wakeWindowBeforeMinutes {
+                    labelled("Previous wake window", value: DurationFormatting.compact(window))
+                }
+
+                if let prediction = result.prediction {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(SleepCopy.eventTitle(result.event))
-                            .font(.title3.weight(.semibold))
-                        Text(DurationFormatting.compact(result.event.durationMinutes ?? 0))
-                            .font(.system(size: 44, weight: .semibold, design: .rounded))
-                    }
-
-                    if let window = result.event.wakeWindowBeforeMinutes {
-                        labelled("Previous wake window", value: DurationFormatting.compact(window))
-                    }
-
-                    if let prediction = result.prediction {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Next sleep likely · \(SleepCopy.nextSleepTitle(prediction))")
-                                .font(.footnote)
-                                .foregroundStyle(Theme.secondaryText)
-                            Text(model.formattedRange(prediction))
-                                .font(.system(size: 30, weight: .semibold, design: .rounded))
-                            Text("Based on \(SleepCopy.basedOn(prediction.dataSource))")
-                                .font(.caption)
-                                .foregroundStyle(Theme.tertiaryText)
-                        }
-                    }
-
-                    Spacer()
-
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Done")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 15)
-                            .background(Theme.awakeAccent, in: RoundedRectangle(cornerRadius: 18))
-                            .foregroundStyle(Color.black.opacity(0.85))
+                        Text("Next sleep likely · \(SleepCopy.nextSleepTitle(prediction))")
+                            .font(.footnote)
+                            .foregroundStyle(Theme.secondaryText)
+                        Text(model.formattedRange(prediction))
+                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                        Text("Based on \(SleepCopy.basedOn(prediction.dataSource))")
+                            .font(.caption)
+                            .foregroundStyle(Theme.tertiaryText)
                     }
                 }
-                .padding(24)
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(Theme.awakeAccent, in: RoundedRectangle(cornerRadius: 18))
+                        .foregroundStyle(Color.black.opacity(0.85))
+                }
             }
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background { AtmosphereBackground(mood: .idle) }
             .foregroundStyle(.white)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

@@ -8,8 +8,38 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    HStack(spacing: 14) {
+                        LullBrandMark(style: .badge, size: 56)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Nana")
+                                .font(.title3.weight(.semibold))
+                            Text("Baby sleep, gently tracked")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                    .listRowBackground(Color.clear)
+                }
+
                 if let service = model.service {
                     Section("Baby") {
+                        HStack(spacing: 16) {
+                            BabyAvatarButton(size: 64, showsEditBadge: true)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(model.babyName)
+                                    .font(.headline)
+                                Text(model.hasCustomBabyAvatar ? "Tap to change or remove photo" : "Tap to add a photo")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+
                         TextField("Name", text: Binding(
                             get: { service.profile.name },
                             set: { name in model.updateProfile { $0.name = name } }
@@ -29,46 +59,6 @@ struct SettingsView: View {
                                 Spacer()
                                 Text("\(SleepCopy.ageDescription(ages.chronological)) · \(ages.chronological.days) days")
                                     .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    Section("Prematurity") {
-                        Toggle("Born prematurely", isOn: Binding(
-                            get: { service.profile.wasPremature },
-                            set: { value in
-                                model.updateProfile {
-                                    $0.wasPremature = value
-                                    if !value {
-                                        $0.gestationalAgeWeeks = nil
-                                        $0.correctedAgeEnabled = false
-                                    } else if $0.gestationalAgeWeeks == nil {
-                                        $0.gestationalAgeWeeks = 34
-                                    }
-                                }
-                            }
-                        ))
-
-                        if service.profile.wasPremature {
-                            Stepper(
-                                "Gestational age: \(service.profile.gestationalAgeWeeks ?? 34) weeks",
-                                value: Binding(
-                                    get: { service.profile.gestationalAgeWeeks ?? 34 },
-                                    set: { weeks in model.updateProfile { $0.gestationalAgeWeeks = weeks } }
-                                ),
-                                in: 22...37
-                            )
-                            Toggle("Use corrected age for estimates", isOn: Binding(
-                                get: { service.profile.correctedAgeEnabled },
-                                set: { value in model.updateProfile { $0.correctedAgeEnabled = value } }
-                            ))
-                            if let corrected = model.ages?.corrected {
-                                HStack {
-                                    Text("Corrected age")
-                                    Spacer()
-                                    Text(SleepCopy.ageDescription(corrected))
-                                        .foregroundStyle(.secondary)
-                                }
                             }
                         }
                     }
