@@ -11,29 +11,27 @@ struct HomeView: View {
     @State private var showingWakeTimeSheet = false
 
     var body: some View {
-        ZStack {
-            Theme.backgroundGradient(isSleeping: model.isSleeping).ignoresSafeArea()
+        ScrollView {
+            VStack(spacing: 16) {
+                header
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    header
-
-                    if model.isSleeping {
-                        sleepingCard
-                    } else {
-                        awakeCard
-                    }
-
-                    ForEach(model.trends) { signal in
-                        TrendBanner(signal: signal)
-                    }
-
-                    RecentSleepsCard()
+                if model.isSleeping {
+                    sleepingCard
+                } else {
+                    awakeCard
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+
+                ForEach(model.trends) { signal in
+                    TrendBanner(signal: signal)
+                }
+
+                RecentSleepsCard()
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
         }
+        .background { AtmosphereBackground(mood: model.atmosphereMood) }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
         .sheet(isPresented: $showingStartSheet) {
             StartSleepSheet()

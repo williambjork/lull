@@ -60,6 +60,11 @@ final class AppModel {
     var activeSleep: SleepEvent? { service?.activeSleep }
     var isSleeping: Bool { activeSleep != nil }
 
+    /// Atmosphere behind Home (and similar screens): idle when awake; asleep vs night from active type.
+    var atmosphereMood: AtmosphereMood {
+        AtmosphereMood.from(isSleeping: isSleeping, sleepType: activeSleep?.type)
+    }
+
     var babyName: String {
         let name = service?.profile.name.trimmingCharacters(in: .whitespaces) ?? ""
         return name.isEmpty ? "Your baby" : name
