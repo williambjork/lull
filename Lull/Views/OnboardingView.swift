@@ -6,9 +6,6 @@ struct OnboardingView: View {
 
     @State private var name = ""
     @State private var dateOfBirth = Date()
-    @State private var wasPremature = false
-    @State private var gestationalAgeWeeks = 34
-    @State private var correctedAgeEnabled = true
 
     var body: some View {
         ZStack {
@@ -47,28 +44,6 @@ struct OnboardingView: View {
                     }
                     .card()
 
-                    VStack(alignment: .leading, spacing: 14) {
-                        Toggle("Born prematurely", isOn: $wasPremature)
-                            .font(.subheadline)
-
-                        if wasPremature {
-                            Stepper(
-                                "Gestational age: \(gestationalAgeWeeks) weeks",
-                                value: $gestationalAgeWeeks,
-                                in: 22...37
-                            )
-                            .font(.subheadline)
-
-                            Toggle("Use corrected age", isOn: $correctedAgeEnabled)
-                                .font(.subheadline)
-
-                            Text("Corrected age counts from the due date instead of the birth date. Estimates use it when it's on.")
-                                .font(.caption)
-                                .foregroundStyle(Theme.tertiaryText)
-                        }
-                    }
-                    .card()
-
                     Text(SleepCopy.disclaimer)
                         .font(.caption)
                         .foregroundStyle(Theme.tertiaryText)
@@ -76,10 +51,7 @@ struct OnboardingView: View {
                     Button {
                         model.createProfile(
                             name: name,
-                            dateOfBirth: dateOfBirth,
-                            wasPremature: wasPremature,
-                            gestationalAgeWeeks: gestationalAgeWeeks,
-                            correctedAgeEnabled: correctedAgeEnabled
+                            dateOfBirth: dateOfBirth
                         )
                     } label: {
                         Text("Start tracking")

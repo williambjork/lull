@@ -18,7 +18,6 @@ final class AppModel {
     // Derived values, refreshed on mutation and once a minute rather than on
     // every tick — recomputing medians 60 times a minute would be silly.
     private(set) var prediction: SleepPrediction?
-    private(set) var totals: SleepTotals?
     private(set) var trends: [SleepTrendSignal] = []
     private(set) var sleepProfile: BabySleepProfile?
 
@@ -79,17 +78,11 @@ final class AppModel {
 
     func createProfile(
         name: String,
-        dateOfBirth: Date,
-        wasPremature: Bool,
-        gestationalAgeWeeks: Int?,
-        correctedAgeEnabled: Bool
+        dateOfBirth: Date
     ) {
         let profile = BabyProfile(
             name: name,
-            dateOfBirth: dateOfBirth,
-            wasPremature: wasPremature,
-            gestationalAgeWeeks: wasPremature ? gestationalAgeWeeks : nil,
-            correctedAgeEnabled: wasPremature && correctedAgeEnabled
+            dateOfBirth: dateOfBirth
         )
         do {
             service = try SleepService.create(profile: profile, repository: repository)
@@ -277,13 +270,11 @@ final class AppModel {
     func refreshDerived() {
         guard let service else {
             prediction = nil
-            totals = nil
             trends = []
             sleepProfile = nil
             return
         }
         prediction = service.prediction(asOf: now)
-        totals = service.totals(asOf: now)
         trends = service.trends(asOf: now)
         sleepProfile = service.sleepProfile(asOf: now)
         lastRefreshMinute = Calendar.current.dateInterval(of: .minute, for: now)?.start

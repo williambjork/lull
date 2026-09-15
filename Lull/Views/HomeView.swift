@@ -28,10 +28,6 @@ struct HomeView: View {
                         TrendBanner(signal: signal)
                     }
 
-                    if let totals = model.totals {
-                        TotalsCard(totals: totals)
-                    }
-
                     RecentSleepsCard()
                 }
                 .padding(.horizontal, 20)
@@ -230,45 +226,6 @@ struct PredictionBlock: View {
     private var headline: String {
         let title = SleepCopy.nextSleepTitle(prediction)
         return "\(SleepCopy.predictionHeadline) · \(title)"
-    }
-}
-
-// MARK: - Totals
-
-struct TotalsCard: View {
-    let totals: SleepTotals
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Sleep today")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.secondaryText)
-
-            Text(DurationFormatting.compact(totals.todayTotalMinutes))
-                .font(.system(size: 30, weight: .semibold, design: .rounded))
-
-            HStack(spacing: 28) {
-                statistic("Night", minutes: totals.nightSleepMinutes)
-                statistic("Naps", minutes: totals.daytimeSleepMinutes)
-                statistic("Last 24h", minutes: totals.totalSleep24hMinutes)
-            }
-
-            Text(SleepCopy.totalSleepContext(totals))
-                .font(.caption)
-                .foregroundStyle(Theme.tertiaryText)
-        }
-        .card()
-    }
-
-    private func statistic(_ label: String, minutes: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(Theme.tertiaryText)
-            Text(DurationFormatting.compact(minutes))
-                .font(.callout.weight(.medium))
-                .monospacedDigit()
-        }
     }
 }
 
