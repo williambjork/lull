@@ -61,8 +61,7 @@ enum ScreenshotCapture {
 
         model.deleteAllData()
 
-        let calendar = Calendar.current
-        let dob = calendar.date(byAdding: .month, value: -4, to: Date()) ?? Date()
+        let dob = Calendar.current.date(byAdding: .month, value: -4, to: Date()) ?? Date()
         model.createProfile(
             name: "Astrid",
             dateOfBirth: dob,
@@ -72,15 +71,14 @@ enum ScreenshotCapture {
         )
 
         let now = Date()
-        func stamp(_ daysAgo: Int, hour: Int, minute: Int) -> Date {
-            let day = calendar.date(byAdding: .day, value: -daysAgo, to: now) ?? now
-            return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
+        func ago(hours: Double, minutes: Double = 0) -> Date {
+            now.addingTimeInterval(-(hours * 3600 + minutes * 60))
         }
 
-        // Yesterday: two naps + night
+        // Recent history so Home / History / Patterns are populated at any time of day.
         model.addPastSleep(
-            startedAt: stamp(1, hour: 9, minute: 30),
-            endedAt: stamp(1, hour: 10, minute: 45),
+            startedAt: ago(hours: 30),
+            endedAt: ago(hours: 28, minutes: 45),
             type: .nap,
             location: .crib,
             method: .independent,
@@ -89,8 +87,8 @@ enum ScreenshotCapture {
             notes: nil
         )
         model.addPastSleep(
-            startedAt: stamp(1, hour: 13, minute: 0),
-            endedAt: stamp(1, hour: 14, minute: 20),
+            startedAt: ago(hours: 26),
+            endedAt: ago(hours: 24, minutes: 40),
             type: .nap,
             location: .stroller,
             method: .other,
@@ -99,8 +97,8 @@ enum ScreenshotCapture {
             notes: nil
         )
         model.addPastSleep(
-            startedAt: stamp(1, hour: 19, minute: 0),
-            endedAt: stamp(0, hour: 6, minute: 30),
+            startedAt: ago(hours: 20),
+            endedAt: ago(hours: 8),
             type: .night,
             location: .crib,
             method: .feeding,
@@ -108,11 +106,9 @@ enum ScreenshotCapture {
             contexts: [],
             notes: nil
         )
-
-        // Today: one completed morning nap so Home / History have content
         model.addPastSleep(
-            startedAt: stamp(0, hour: 9, minute: 15),
-            endedAt: stamp(0, hour: 10, minute: 25),
+            startedAt: ago(hours: 3, minutes: 30),
+            endedAt: ago(hours: 2, minutes: 10),
             type: .nap,
             location: .crib,
             method: .rocking,
