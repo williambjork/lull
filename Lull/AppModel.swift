@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 import LullCore
 
 /// Owns the service, the ticking clock, and the small amount of derived state
@@ -17,9 +18,12 @@ final class AppModel {
     // Derived values, refreshed on mutation and once a minute rather than on
     // every tick — recomputing medians 60 times a minute would be silly.
     private(set) var prediction: SleepPrediction?
-    private(set) var totals: SleepTotals?
     private(set) var trends: [SleepTrendSignal] = []
     private(set) var sleepProfile: BabySleepProfile?
+
+    /// Parent-chosen baby photo, or nil to use the bundled placeholder art.
+    private(set) var babyAvatarImage: UIImage?
+    private(set) var hasCustomBabyAvatar = false
 
     /// Drives the post-sleep summary sheet.
     var lastStopResult: SleepStopResult?
@@ -48,6 +52,7 @@ final class AppModel {
             loadError = "Couldn't read saved sleep data."
         }
         ScreenshotCapture.seedDemoData(into: self)
+        reloadBabyAvatar()
         refreshDerived()
         startTicking()
     }
@@ -74,17 +79,11 @@ final class AppModel {
 
     func createProfile(
         name: String,
-        dateOfBirth: Date,
-        wasPremature: Bool,
-        gestationalAgeWeeks: Int?,
-        correctedAgeEnabled: Bool
+        dateOfBirth: Date
     ) {
         let profile = BabyProfile(
             name: name,
-            dateOfBirth: dateOfBirth,
-            wasPremature: wasPremature,
-            gestationalAgeWeeks: wasPremature ? gestationalAgeWeeks : nil,
-            correctedAgeEnabled: wasPremature && correctedAgeEnabled
+            dateOfBirth: dateOfBirth
         )
         do {
             service = try SleepService.create(profile: profile, repository: repository)
@@ -201,9 +200,29 @@ final class AppModel {
         perform { service in try service.updateProfile(transform) }
     }
 
+    func setBabyAvatar(_ image: UIImage) {
+        do {
+            try BabyAvatarStore.save(image)
+            reloadBabyAvatar()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func clearBabyAvatar() {
+        do {
+            try BabyAvatarStore.delete()
+            reloadBabyAvatar()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func deleteAllData() {
         perform { service in
             try service.deleteAllData()
+            try? BabyAvatarStore.delete()
+            self.reloadBabyAvatar()
             self.service = nil
         }
     }
@@ -252,13 +271,11 @@ final class AppModel {
     func refreshDerived() {
         guard let service else {
             prediction = nil
-            totals = nil
             trends = []
             sleepProfile = nil
             return
         }
         prediction = service.prediction(asOf: now)
-        totals = service.totals(asOf: now)
         trends = service.trends(asOf: now)
         sleepProfile = service.sleepProfile(asOf: now)
         lastRefreshMinute = Calendar.current.dateInterval(of: .minute, for: now)?.start
@@ -271,6 +288,11 @@ final class AppModel {
     }
 
     // MARK: - Internals
+
+    private func reloadBabyAvatar() {
+        babyAvatarImage = BabyAvatarStore.load()
+        hasCustomBabyAvatar = BabyAvatarStore.hasCustomAvatar
+    }
 
     private func perform(_ work: (SleepService) throws -> Void) {
         guard let service else { return }

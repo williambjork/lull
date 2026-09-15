@@ -251,6 +251,8 @@
 				DEVELOPMENT_TEAM = 74952LBRMQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Lull uses the camera so you can take a photo of your baby for their avatar.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Lull uses your photo library so you can choose a picture of your baby for their avatar.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -279,6 +281,8 @@
 				DEVELOPMENT_TEAM = 74952LBRMQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Lull uses the camera so you can take a photo of your baby for their avatar.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Lull uses your photo library so you can choose a picture of your baby for their avatar.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
