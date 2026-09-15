@@ -27,7 +27,7 @@ struct SleepSummarySheet: View {
                         Text("Next sleep likely · \(SleepCopy.nextSleepTitle(prediction))")
                             .font(.footnote)
                             .foregroundStyle(Theme.secondaryText)
-                        Text(model.formattedRange(prediction))
+                        Text(model.formattedClock(prediction.predictedStartAt))
                             .font(.system(size: 30, weight: .semibold, design: .rounded))
                         Text("Based on \(SleepCopy.basedOn(prediction.dataSource))")
                             .font(.caption)

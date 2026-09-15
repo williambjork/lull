@@ -11,6 +11,18 @@ public enum DurationFormatting {
         return "\(hours)h \(String(format: "%02d", remainder))m"
     }
 
+    /// Live running timer: "4:32", "0:05", "1:05:22".
+    public static func timer(seconds: Int) -> String {
+        let total = max(0, seconds)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let secs = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, secs)
+        }
+        return String(format: "%d:%02d", minutes, secs)
+    }
+
     /// "~2h 20m" — the tilde is doing real work: these are estimates.
     public static func approximate(_ minutes: Int) -> String {
         "~" + compact(minutes)

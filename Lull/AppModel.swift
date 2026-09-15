@@ -80,6 +80,12 @@ final class AppModel {
     /// Elapsed minutes of the running timer.
     var activeElapsedMinutes: Int? { activeSleep?.elapsedMinutes(asOf: now) }
 
+    /// Elapsed seconds of the running timer (for the live HH:MM:SS / M:SS display).
+    var activeElapsedSeconds: Int? {
+        guard let active = activeSleep else { return nil }
+        return max(0, Int(now.timeIntervalSince(active.startedAt)))
+    }
+
     // MARK: - Onboarding
 
     func createProfile(
