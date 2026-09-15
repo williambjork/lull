@@ -32,10 +32,10 @@ struct LullBrandHeader: View {
     var body: some View {
         VStack(alignment: alignment, spacing: 16) {
             LullBrandMark(style: .badge, size: markSize)
-            Text("Lull")
+            Text("Nana")
                 .font(.largeTitle.bold())
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Lull")
+        .accessibilityLabel("Nana")
     }
 }

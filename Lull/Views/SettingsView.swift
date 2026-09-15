@@ -12,7 +12,7 @@ struct SettingsView: View {
                     HStack(spacing: 14) {
                         LullBrandMark(style: .badge, size: 56)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Lull")
+                            Text("Nana")
                                 .font(.title3.weight(.semibold))
                             Text("Baby sleep, gently tracked")
                                 .font(.caption)
@@ -79,7 +79,7 @@ struct SettingsView: View {
 
                     Section("How estimates work") {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Lull starts from broad age-based ranges and shifts towards your baby's own pattern as you track more sleeps.")
+                            Text("Nana starts from broad age-based ranges and shifts towards your baby's own pattern as you track more sleeps.")
                             Text("Under \(model.service?.predictionConfig.minSamplesForPersonal ?? 5) similar days it uses age ranges only; after \(model.service?.predictionConfig.strongHistorySampleCount ?? 10) it leans mostly on your baby.")
                             Text("Estimates are always a window, because there isn't a single correct minute.")
                         }

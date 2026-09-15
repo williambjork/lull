@@ -12,7 +12,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 16) {
                     LullBrandMark(style: .badge, size: 96)
-                    Text("Lull")
+                    Text("Nana")
                         .font(.largeTitle.bold())
                     Text("Track sleep, and get a sense of when your baby is likely to be ready for the next one.")
                         .font(.subheadline)
@@ -20,7 +20,7 @@ struct OnboardingView: View {
                 }
                 .padding(.top, 40)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Lull")
+                .accessibilityLabel("Nana")
 
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 6) {

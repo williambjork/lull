@@ -1,7 +1,10 @@
-# Lull
+# Nana
 
 An iPhone app for tracking a baby's sleep and estimating when they are likely to
 be ready for the next one.
+
+The Xcode target, scheme, module, `LullCore` package, and bundle identifier
+`com.williambjork.Lull` stay as **Lull** so signing and package paths keep working.
 
 The product answers one question well: *when will my baby probably be ready to
 sleep again?* It answers it as a **time range**, based on age-appropriate ranges

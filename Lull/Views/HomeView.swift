@@ -110,7 +110,7 @@ struct HomeView: View {
                 PredictionBlock(prediction: prediction)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Tell Lull when your baby woke up and it can estimate the next sleep.")
+                    Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
                         .font(.subheadline)
                         .foregroundStyle(Theme.secondaryText)
                     Button("Set today's wake time") { showingWakeTimeSheet = true }
