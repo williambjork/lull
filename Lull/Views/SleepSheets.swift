@@ -50,7 +50,10 @@ struct SleepSummarySheet: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background { AtmosphereBackground(mood: .idle) }
+            .background {
+                // Sheet hosts size `.background` correctly; ZStack would fight NavigationStack chrome.
+                AtmosphereBackground(mood: .idle)
+            }
             .foregroundStyle(.white)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

@@ -18,8 +18,10 @@ enum AtmosphereMood: Equatable, Sendable {
     }
 }
 
-/// Calm, low-contrast atmosphere: slow gradient drift, one soft light blob,
-/// optional faint grain. Use as `.background { AtmosphereBackground(mood:) }`.
+/// Calm atmosphere: slow gradient drift, one soft light blob, faint grain.
+/// Prefer wrapping content in a `ZStack` with this as the back layer so the
+/// full-bleed wash always gets a real size (`.background { }` can under-size
+/// `GeometryReader` layers on some hosts).
 struct AtmosphereBackground: View {
     var mood: AtmosphereMood
 
@@ -27,10 +29,12 @@ struct AtmosphereBackground: View {
 
     var body: some View {
         ZStack {
+            // Solid base so TabView / sheet chrome never shows through as flat black.
+            Theme.background
             if reduceMotion {
                 staticAtmosphere
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { context in
+                TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { context in
                     driftingAtmosphere(at: context.date)
                 }
             }
@@ -66,12 +70,12 @@ struct AtmosphereBackground: View {
             let size = min(geo.size.width, geo.size.height) * Theme.atmosphereBlobScale(mood: mood)
             Ellipse()
                 .fill(Theme.atmosphereBlobColor(mood: mood, phase: phase))
-                .frame(width: size * 1.35, height: size)
-                .blur(radius: size * 0.42)
+                .frame(width: size * 1.45, height: size)
+                .blur(radius: size * 0.34)
                 .opacity(Theme.atmosphereBlobOpacity(mood: mood))
                 .position(
-                    x: geo.size.width * 0.5 + offset.width * geo.size.width * 0.18,
-                    y: geo.size.height * 0.32 + offset.height * geo.size.height * 0.14
+                    x: geo.size.width * 0.5 + offset.width * geo.size.width * 0.26,
+                    y: geo.size.height * 0.30 + offset.height * geo.size.height * 0.18
                 )
         }
     }
@@ -107,12 +111,12 @@ struct AtmosphereBackground: View {
 // MARK: - Motion helpers
 
 private enum AtmosphereMotion {
-    /// Very slow shared clock; different moods use different periods so they don’t feel identical.
+    /// Slow shared clock; periods shortened so the drift is perceptible without feeling busy.
     static func phase(at date: Date, mood: AtmosphereMood) -> Double {
         let period: TimeInterval = switch mood {
-        case .idle: 42
-        case .asleep: 56
-        case .night: 68
+        case .idle: 24
+        case .asleep: 32
+        case .night: 40
         }
         return date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
     }
@@ -120,13 +124,13 @@ private enum AtmosphereMotion {
     static func blobOffset(mood: AtmosphereMood, phase: Double) -> CGSize {
         let angle = phase * .pi * 2
         let amp: Double = switch mood {
-        case .idle: 1.0
-        case .asleep: 0.75
-        case .night: 0.55
+        case .idle: 1.35
+        case .asleep: 1.05
+        case .night: 0.85
         }
         return CGSize(
             width: cos(angle) * amp,
-            height: sin(angle * 0.85 + 0.6) * amp * 0.9
+            height: sin(angle * 0.85 + 0.6) * amp * 0.95
         )
     }
 

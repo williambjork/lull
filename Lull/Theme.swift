@@ -24,20 +24,24 @@ enum Theme {
     // MARK: - Atmosphere tokens
 
     /// Top-stop colors for `AtmosphereBackground` (base stays `background`).
-    static let atmosphereIdleTop = Color(red: 0.13, green: 0.10, blue: 0.16)
-    static let atmosphereIdleTopDrift = Color(red: 0.15, green: 0.11, blue: 0.18)
-    static let atmosphereAsleepTop = Color(red: 0.06, green: 0.08, blue: 0.20)
-    static let atmosphereAsleepTopDrift = Color(red: 0.07, green: 0.10, blue: 0.24)
-    static let atmosphereNightTop = Color(red: 0.04, green: 0.05, blue: 0.14)
-    static let atmosphereNightTopDrift = Color(red: 0.05, green: 0.06, blue: 0.18)
+    /// Drift pairs are intentionally farther apart than the first ship so the
+    /// slow breathe reads on a phone at night — still calm, no longer invisible.
+    static let atmosphereIdleTop = Color(red: 0.18, green: 0.12, blue: 0.20)
+    static let atmosphereIdleTopDrift = Color(red: 0.26, green: 0.16, blue: 0.28)
+    static let atmosphereAsleepTop = Color(red: 0.08, green: 0.12, blue: 0.28)
+    static let atmosphereAsleepTopDrift = Color(red: 0.12, green: 0.18, blue: 0.38)
+    static let atmosphereNightTop = Color(red: 0.05, green: 0.08, blue: 0.22)
+    static let atmosphereNightTopDrift = Color(red: 0.08, green: 0.12, blue: 0.32)
 
-    static let atmosphereGrainOpacity: Double = 0.028
+    static let atmosphereGrainOpacity: Double = 0.055
 
     static func atmosphereGradient(mood: AtmosphereMood, phase: Double) -> LinearGradient {
         let (a, b) = atmosphereTopPair(mood: mood)
         let t = softWave(phase)
         let top = blend(a, b, t: t)
-        let bottom = blend(background, a.opacity(0.35), t: t * 0.25)
+        // Lift the lower stop a little so the vertical wash isn’t flat navy.
+        let liftedBottom = blend(background, a, t: 0.22)
+        let bottom = blend(liftedBottom, b, t: t * 0.35)
         return LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
     }
 
@@ -45,13 +49,21 @@ enum Theme {
         let t = softWave(phase + 0.25)
         switch mood {
         case .idle:
-            return blend(awakeAccent.opacity(0.22), awakeAccent.opacity(0.14), t: t)
+            return blend(
+                Color(red: 0.98, green: 0.76, blue: 0.42, opacity: 0.42),
+                Color(red: 0.98, green: 0.70, blue: 0.50, opacity: 0.28),
+                t: t
+            )
         case .asleep:
-            return blend(asleepAccent.opacity(0.20), asleepAccent.opacity(0.12), t: t)
+            return blend(
+                Color(red: 0.55, green: 0.66, blue: 0.98, opacity: 0.40),
+                Color(red: 0.45, green: 0.58, blue: 0.95, opacity: 0.26),
+                t: t
+            )
         case .night:
             return blend(
-                Color(red: 0.35, green: 0.45, blue: 0.85).opacity(0.16),
-                asleepAccent.opacity(0.10),
+                Color(red: 0.35, green: 0.45, blue: 0.90, opacity: 0.36),
+                Color(red: 0.45, green: 0.55, blue: 0.95, opacity: 0.22),
                 t: t
             )
         }
@@ -59,17 +71,17 @@ enum Theme {
 
     static func atmosphereBlobOpacity(mood: AtmosphereMood) -> Double {
         switch mood {
-        case .idle: 0.55
-        case .asleep: 0.50
-        case .night: 0.42
+        case .idle: 0.78
+        case .asleep: 0.72
+        case .night: 0.64
         }
     }
 
     static func atmosphereBlobScale(mood: AtmosphereMood) -> CGFloat {
         switch mood {
-        case .idle: 0.72
-        case .asleep: 0.78
-        case .night: 0.85
+        case .idle: 0.78
+        case .asleep: 0.84
+        case .night: 0.92
         }
     }
 
