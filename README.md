@@ -67,7 +67,7 @@ assertion harness instead of a test target:
 cd LullCore && swift run LullCoreVerify
 ```
 
-It currently runs 159 assertions covering age maths, priors, classification, nap
+It currently runs 162 assertions covering age maths, priors, classification, nap
 indexing, wake windows, totals, the derived baseline, every prediction weighting
 tier, trend detection, the service flow and the copy. Port it to a test target
 (the assertions translate one-to-one) once a full Xcode install is available.

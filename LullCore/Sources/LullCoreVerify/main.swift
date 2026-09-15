@@ -291,6 +291,11 @@ expect.suite("Daily totals and rolling 24-hour sleep") {
     expect.equal(summary.totalSleepMinutes, 840, "today's total is night plus naps")
     expect.check(summary.morningWakeAt != nil, "the morning wake time is available")
     expect.check(summary.bedtimeAt != nil, "tonight's bedtime is available")
+    expect.equal(
+        summary.wakeWindowsMinutes,
+        [120, 140, 145, 195],
+        "the day's wake windows are its own three naps plus bedtime"
+    )
 
     // Rolling window, clipped precisely rather than bucketed by day.
     let rolling = analytics.totalSleep24hMinutes(asOf: noon, events: events)
@@ -781,6 +786,15 @@ expect.suite("Start/stop flow keeps raw events and derived data consistent") {
     )
     expect.equal(secondStop.event.durationMinutes, 50, "the duration follows the corrected start")
     expect.equal(secondStop.event.napIndex, 2, "it is nap 2")
+
+    // Last night's sleep belongs to today's list, and only to today's.
+    let todayKey = service.calendar.day(for: settingTime(today, hour: 12, minute: 0))
+    let yesterdayKey = service.calendar.adding(days: -1, to: todayKey)
+    expect.equal(service.events(on: todayKey).count, 3, "today shows its naps plus the night it woke from")
+    expect.check(
+        service.events(on: yesterdayKey).isEmpty,
+        "the same night sleep is not listed again under yesterday"
+    )
 
     let totals = service.totals(asOf: settingTime(today, hour: 14, minute: 0))
     expect.equal(totals.daytimeSleepMinutes, 122, "today's nap total")

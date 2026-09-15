@@ -77,7 +77,11 @@ public struct SleepAnalytics: Sendable {
             .min { $0.startedAt < $1.startedAt }
             .map(\.startedAt)
 
-        let wakeWindows = dayEvents.compactMap(\.wakeWindowBeforeMinutes)
+        // The day's own structure: the windows before each nap and before bedtime,
+        // which is not the same set as the sleeps attributed to the day.
+        let wakeWindows = completed
+            .filter { calendar.day(for: $0.startedAt) == day }
+            .compactMap(\.wakeWindowBeforeMinutes)
 
         return DailySleepSummary(
             day: day,

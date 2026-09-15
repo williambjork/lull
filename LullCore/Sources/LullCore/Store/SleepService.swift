@@ -430,10 +430,16 @@ public final class SleepService {
         analytics.allSummaries(events: dataset.events, dayFlags: dataset.dayFlags)
     }
 
+    /// Sleeps shown under a day, matching how that day's totals are counted:
+    /// its naps, plus the night sleep it woke up from. A running timer shows on
+    /// the day it started, since we do not know yet where it will land.
     public func events(on day: SleepDay) -> [SleepEvent] {
         let analytics = analytics
         return dataset.events
-            .filter { analytics.attributedDay(for: $0) == day || analytics.calendar.day(for: $0.startedAt) == day }
+            .filter { event in
+                if event.isActive { return analytics.calendar.day(for: event.startedAt) == day }
+                return analytics.attributedDay(for: event) == day
+            }
             .sorted { $0.startedAt < $1.startedAt }
     }
 
