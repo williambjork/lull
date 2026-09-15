@@ -77,7 +77,7 @@ struct InsightsView: View {
                     }
                 } else {
                     Section("Your baby's pattern") {
-                        Text("A few days of tracking and Lull will start using your baby's own rhythm instead of age-based ranges.")
+                        Text("A few days of tracking and Nana will start using your baby's own rhythm instead of age-based ranges.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }

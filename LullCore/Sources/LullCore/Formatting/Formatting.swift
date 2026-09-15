@@ -73,7 +73,7 @@ public enum SleepCopy {
     public static let sleepingLabel = "SLEEPING"
 
     public static let disclaimer = """
-        Lull learns your baby's pattern to suggest a likely window. Every baby is \
+        Nana learns your baby's pattern to suggest a likely window. Every baby is \
         different, and these suggestions aren't medical advice.
         """
 
