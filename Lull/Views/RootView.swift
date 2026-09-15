@@ -7,10 +7,10 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if model.hasProfile {
-                MainTabView()
-            } else {
+            if ScreenshotCapture.forceOnboarding || !model.hasProfile {
                 OnboardingView()
+            } else {
+                MainTabView()
             }
         }
         .tint(Theme.accent(isSleeping: model.isSleeping))
@@ -33,16 +33,22 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
+    @State private var selectedTab = ScreenshotCapture.initialTab
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem { Label("Now", systemImage: "moon.zzz.fill") }
+                .tag(ScreenshotCapture.Tab.home)
             HistoryView()
                 .tabItem { Label("History", systemImage: "list.bullet") }
+                .tag(ScreenshotCapture.Tab.history)
             InsightsView()
                 .tabItem { Label("Patterns", systemImage: "chart.bar.fill") }
+                .tag(ScreenshotCapture.Tab.patterns)
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                .tag(ScreenshotCapture.Tab.settings)
         }
     }
 }

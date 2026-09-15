@@ -7,3 +7,6 @@ build/
 *.xcuserdatad
 xcuserdata/
 .typecheck/
+
+.derivedData-screenshots/
+
