@@ -869,6 +869,9 @@ expect.suite("Formatting keeps the tone right") {
     expect.equal(DurationFormatting.compact(102), "1h 42m", "compact duration")
     expect.equal(DurationFormatting.compact(58), "58m", "sub-hour duration")
     expect.equal(DurationFormatting.compact(822), "13h 42m", "long duration")
+    expect.equal(DurationFormatting.timer(seconds: 5), "0:05", "sub-minute live timer")
+    expect.equal(DurationFormatting.timer(seconds: 272), "4:32", "sub-hour live timer")
+    expect.equal(DurationFormatting.timer(seconds: 3922), "1:05:22", "hour-plus live timer")
     expect.equal(DurationFormatting.approximate(140), "~2h 20m", "approximate duration")
     expect.equal(
         DurationFormatting.approximateHourRange(minMinutes: 120, maxMinutes: 240),

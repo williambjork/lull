@@ -11,26 +11,29 @@ struct HomeView: View {
     @State private var showingWakeTimeSheet = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                header
+        ZStack {
+            AtmosphereBackground(mood: model.atmosphereMood)
 
-                if model.isSleeping {
-                    sleepingCard
-                } else {
-                    awakeCard
+            ScrollView {
+                VStack(spacing: 16) {
+                    header
+
+                    if model.isSleeping {
+                        sleepingCard
+                    } else {
+                        awakeCard
+                    }
+
+                    ForEach(model.trends) { signal in
+                        TrendBanner(signal: signal)
+                    }
+
+                    RecentSleepsCard()
                 }
-
-                ForEach(model.trends) { signal in
-                    TrendBanner(signal: signal)
-                }
-
-                RecentSleepsCard()
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
         }
-        .background { AtmosphereBackground(mood: model.atmosphereMood) }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
         .sheet(isPresented: $showingStartSheet) {
@@ -84,27 +87,21 @@ struct HomeView: View {
     }
 
     // MARK: - Awake
+    // Visual hierarchy: Start Sleep (P1) → next-sleep prediction (P2) → awake-for (P3)
 
     private var awakeCard: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(SleepCopy.awakeLabel)
-                    .font(.caption.weight(.bold))
-                    .tracking(2)
-                    .foregroundStyle(Theme.awakeAccent)
+        VStack(spacing: 22) {
+            Text(SleepCopy.awakeLabel)
+                .font(.caption.weight(.bold))
+                .tracking(2)
+                .foregroundStyle(Theme.awakeAccent)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                if let awake = model.awakeMinutes {
-                    Text("Awake for")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
-                    Text(DurationFormatting.compact(awake))
-                        .font(.system(size: 46, weight: .semibold, design: .rounded))
-                } else {
-                    Text("No sleep tracked yet today")
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(Theme.secondaryText)
-                }
-            }
+            primarySleepButton(
+                title: "Start Sleep",
+                tint: Theme.awakeAccent,
+                action: { model.startSleep() }
+            )
 
             if let prediction = model.prediction {
                 PredictionBlock(prediction: prediction)
@@ -116,40 +113,58 @@ struct HomeView: View {
                     Button("Set today's wake time") { showingWakeTimeSheet = true }
                         .font(.subheadline.weight(.medium))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            VStack(spacing: 10) {
-                Button {
-                    model.startSleep()
-                } label: {
-                    Text("Start Sleep")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Theme.awakeAccent, in: RoundedRectangle(cornerRadius: 18))
-                        .foregroundStyle(Color.black.opacity(0.85))
-                }
+            awakeForBlock
 
-                Button("Fell asleep earlier, or add details") { showingStartSheet = true }
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
-            }
+            Button("Fell asleep earlier, or add details") { showingStartSheet = true }
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText)
         }
         .card(padding: 24)
     }
 
+    @ViewBuilder
+    private var awakeForBlock: some View {
+        if let awake = model.awakeMinutes {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Awake for")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                Text(DurationFormatting.compact(awake))
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            Text("No sleep tracked yet today")
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     // MARK: - Sleeping
+    // Visual hierarchy: Stop Sleep (P1) → live elapsed timer with seconds
 
     private var sleepingCard: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(SleepCopy.sleepingLabel)
-                    .font(.caption.weight(.bold))
-                    .tracking(2)
-                    .foregroundStyle(Theme.asleepAccent)
+        VStack(spacing: 22) {
+            Text(SleepCopy.sleepingLabel)
+                .font(.caption.weight(.bold))
+                .tracking(2)
+                .foregroundStyle(Theme.asleepAccent)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(DurationFormatting.compact(model.activeElapsedMinutes ?? 0))
-                    .font(.system(size: 46, weight: .semibold, design: .rounded))
+            primarySleepButton(
+                title: "Stop Sleep",
+                tint: Theme.asleepAccent,
+                action: { model.stopSleep() }
+            )
+
+            VStack(spacing: 6) {
+                Text(DurationFormatting.timer(seconds: model.activeElapsedSeconds ?? 0))
+                    .font(.system(size: 44, weight: .semibold, design: .rounded))
                     .monospacedDigit()
 
                 if let active = model.activeSleep {
@@ -159,27 +174,29 @@ struct HomeView: View {
                 }
             }
 
-            VStack(spacing: 10) {
-                Button {
-                    model.stopSleep()
-                } label: {
-                    Text("Stop Sleep")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Theme.asleepAccent, in: RoundedRectangle(cornerRadius: 18))
-                        .foregroundStyle(Color.black.opacity(0.85))
-                }
-
-                HStack(spacing: 18) {
-                    Button("Adjust start time") { showingAdjustStart = true }
-                    Button("Cancel this sleep", role: .destructive) { model.cancelActiveSleep() }
-                }
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
+            HStack(spacing: 18) {
+                Button("Adjust start time") { showingAdjustStart = true }
+                Button("Cancel this sleep", role: .destructive) { model.cancelActiveSleep() }
             }
+            .font(.footnote)
+            .foregroundStyle(Theme.secondaryText)
         }
         .card(padding: 24)
+    }
+
+    private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .frame(width: 168, height: 168)
+                .background(tint, in: Circle())
+                .foregroundStyle(Color.black.opacity(0.85))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
     }
 }
 
@@ -198,7 +215,7 @@ struct PredictionBlock: View {
                 TagLabel(text: prediction.confidence.shortLabel, tint: prediction.confidence.tint)
             }
 
-            Text(model.formattedRange(prediction))
+            Text(model.formattedClock(prediction.predictedStartAt))
                 .font(.system(size: 34, weight: .semibold, design: .rounded))
 
             Text("Based on \(SleepCopy.basedOn(prediction.dataSource))")
