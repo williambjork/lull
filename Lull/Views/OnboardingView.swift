@@ -17,7 +17,7 @@ struct OnboardingView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Lull")
+                        Text("Nana")
                             .font(.largeTitle.bold())
                         Text("Track sleep, and get a sense of when your baby is likely to be ready for the next one.")
                             .font(.subheadline)
