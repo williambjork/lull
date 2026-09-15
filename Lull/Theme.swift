@@ -24,6 +24,7 @@ enum Theme {
     // MARK: - Atmosphere tokens
 
     /// Top-stop colors for `AtmosphereBackground` (base stays `background`).
+    /// First-ship palette restored; only a tiny visibility nudge on wash / blob / grain.
     static let atmosphereIdleTop = Color(red: 0.13, green: 0.10, blue: 0.16)
     static let atmosphereIdleTopDrift = Color(red: 0.15, green: 0.11, blue: 0.18)
     static let atmosphereAsleepTop = Color(red: 0.06, green: 0.08, blue: 0.20)
@@ -31,13 +32,15 @@ enum Theme {
     static let atmosphereNightTop = Color(red: 0.04, green: 0.05, blue: 0.14)
     static let atmosphereNightTopDrift = Color(red: 0.05, green: 0.06, blue: 0.18)
 
-    static let atmosphereGrainOpacity: Double = 0.028
+    /// Original 0.028 + tiny bump.
+    static let atmosphereGrainOpacity: Double = 0.032
 
     static func atmosphereGradient(mood: AtmosphereMood, phase: Double) -> LinearGradient {
         let (a, b) = atmosphereTopPair(mood: mood)
         let t = softWave(phase)
         let top = blend(a, b, t: t)
-        let bottom = blend(background, a.opacity(0.35), t: t * 0.25)
+        // Original used a.opacity(0.35) + t*0.25; nudged slightly for wash contrast.
+        let bottom = blend(background, a.opacity(0.40), t: t * 0.28)
         return LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
     }
 
@@ -45,23 +48,25 @@ enum Theme {
         let t = softWave(phase + 0.25)
         switch mood {
         case .idle:
-            return blend(awakeAccent.opacity(0.22), awakeAccent.opacity(0.14), t: t)
+            // Original 0.22 / 0.14 — tiny bump.
+            return blend(awakeAccent.opacity(0.26), awakeAccent.opacity(0.16), t: t)
         case .asleep:
-            return blend(asleepAccent.opacity(0.20), asleepAccent.opacity(0.12), t: t)
+            return blend(asleepAccent.opacity(0.24), asleepAccent.opacity(0.14), t: t)
         case .night:
             return blend(
-                Color(red: 0.35, green: 0.45, blue: 0.85).opacity(0.16),
-                asleepAccent.opacity(0.10),
+                Color(red: 0.35, green: 0.45, blue: 0.85).opacity(0.19),
+                asleepAccent.opacity(0.12),
                 t: t
             )
         }
     }
 
     static func atmosphereBlobOpacity(mood: AtmosphereMood) -> Double {
+        // Original 0.55 / 0.50 / 0.42 — tiny bump.
         switch mood {
-        case .idle: 0.55
-        case .asleep: 0.50
-        case .night: 0.42
+        case .idle: 0.60
+        case .asleep: 0.54
+        case .night: 0.46
         }
     }
 

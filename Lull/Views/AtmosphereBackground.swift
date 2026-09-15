@@ -18,8 +18,10 @@ enum AtmosphereMood: Equatable, Sendable {
     }
 }
 
-/// Calm, low-contrast atmosphere: slow gradient drift, one soft light blob,
-/// optional faint grain. Use as `.background { AtmosphereBackground(mood:) }`.
+/// Calm atmosphere: slow gradient drift, one soft light blob, faint grain.
+/// Prefer wrapping content in a `ZStack` with this as the back layer so the
+/// full-bleed wash always gets a real size (`.background { }` can under-size
+/// `GeometryReader` layers on some hosts).
 struct AtmosphereBackground: View {
     var mood: AtmosphereMood
 
@@ -27,10 +29,12 @@ struct AtmosphereBackground: View {
 
     var body: some View {
         ZStack {
+            // Solid base so TabView / sheet chrome never shows through as flat black.
+            Theme.background
             if reduceMotion {
                 staticAtmosphere
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { context in
+                TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { context in
                     driftingAtmosphere(at: context.date)
                 }
             }
@@ -107,7 +111,7 @@ struct AtmosphereBackground: View {
 // MARK: - Motion helpers
 
 private enum AtmosphereMotion {
-    /// Very slow shared clock; different moods use different periods so they don’t feel identical.
+    /// First-ship periods. Motion uses integer harmonics of this phase so wrap is seamless.
     static func phase(at date: Date, mood: AtmosphereMood) -> Double {
         let period: TimeInterval = switch mood {
         case .idle: 42
@@ -117,16 +121,18 @@ private enum AtmosphereMotion {
         return date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
     }
 
+    /// 1-periodic offset (sin/cos of `2π·phase` only). Original amp + tiny bump;
+    /// replaces the old `sin(angle * 0.85)` hitch at cycle restart.
     static func blobOffset(mood: AtmosphereMood, phase: Double) -> CGSize {
         let angle = phase * .pi * 2
         let amp: Double = switch mood {
-        case .idle: 1.0
-        case .asleep: 0.75
-        case .night: 0.55
+        case .idle: 1.08
+        case .asleep: 0.80
+        case .night: 0.58
         }
         return CGSize(
             width: cos(angle) * amp,
-            height: sin(angle * 0.85 + 0.6) * amp * 0.9
+            height: sin(angle + 0.6) * amp * 0.9
         )
     }
 
