@@ -27,16 +27,24 @@ if [[ ! -d "$(dirname "$DEFAULT_OUTPUT")" && ! -d "/cursor/stores" ]]; then
   DEFAULT_OUTPUT="${HOME}/Library/Application Support/Cursor/AgentStores/cursor_agent_stores/bc-1535975c-53b5-4e22-8d38-f7b1e5e7fab3/files/media/screenshots"
 fi
 OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT}"
-DERIVED_DATA="${DERIVED_DATA:-$ROOT/.derivedData-screenshots}"
+# Keep DerivedData off iCloud/FileProvider paths (e.g. Documents) — those inject
+# FinderInfo xattrs that make codesign fail with "resource fork … not allowed".
+DERIVED_DATA="${DERIVED_DATA:-/tmp/lull-screenshots-derived}"
 SETTLE_SECONDS="${SETTLE_SECONDS:-3}"
 
 mkdir -p "$OUTPUT_DIR"
 
 echo "==> Looking up simulator: $DEVICE_NAME"
+# Exact device name match (avoid "iPhone 17" matching "iPhone 17e").
 DEVICE_ID="$(xcrun simctl list devices available | awk -F '[()]' -v name="$DEVICE_NAME" '
-  $0 ~ name && $0 !~ /unavailable/ {
-    for (i = 1; i <= NF; i++) {
-      if ($i ~ /^[0-9A-Fa-f-]{36}$/) { print $i; exit }
+  {
+    line = $0
+    sub(/^[[:space:]]+/, "", line)
+    # Device lines look like: Name (UDID) (State)
+    if (index(line, name " (") == 1) {
+      for (i = 1; i <= NF; i++) {
+        if ($i ~ /^[0-9A-Fa-f-]{36}$/) { print $i; exit }
+      }
     }
   }
 ')"
@@ -52,20 +60,27 @@ xcrun simctl bootstatus "$DEVICE_ID" -b
 open -a Simulator --args -CurrentDeviceUDID "$DEVICE_ID" >/dev/null 2>&1 || true
 
 echo "==> Building & installing ($SCHEME → $DEVICE_NAME)"
+set -o pipefail
 xcodebuild \
   -project "$ROOT/Lull.xcodeproj" \
   -scheme "$SCHEME" \
   -configuration Debug \
   -destination "platform=iOS Simulator,id=$DEVICE_ID" \
   -derivedDataPath "$DERIVED_DATA" \
+  CODE_SIGN_IDENTITY="-" \
   build \
   | awk '/error:|warning:|BUILD SUCCEEDED|BUILD FAILED|\*\*/ { print }'
+set +o pipefail
 
 APP_PATH="$(find "$DERIVED_DATA/Build/Products/Debug-iphonesimulator" -name 'Lull.app' -maxdepth 2 | head -n 1)"
 if [[ -z "$APP_PATH" || ! -d "$APP_PATH" ]]; then
   echo "error: Lull.app not found under $DERIVED_DATA" >&2
   exit 1
 fi
+
+# Strip any residual xattrs before install (belt and suspenders).
+xattr -cr "$APP_PATH" 2>/dev/null || true
+codesign --force --sign - --timestamp=none --generate-entitlement-der "$APP_PATH"
 
 xcrun simctl uninstall "$DEVICE_ID" "$BUNDLE_ID" 2>/dev/null || true
 xcrun simctl install "$DEVICE_ID" "$APP_PATH"
