@@ -10,6 +10,19 @@ struct SettingsView: View {
             List {
                 if let service = model.service {
                     Section("Baby") {
+                        HStack(spacing: 16) {
+                            BabyAvatarButton(size: 64, showsEditBadge: true)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(model.babyName)
+                                    .font(.headline)
+                                Text(model.hasCustomBabyAvatar ? "Tap to change or remove photo" : "Tap to add a photo")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+
                         TextField("Name", text: Binding(
                             get: { service.profile.name },
                             set: { name in model.updateProfile { $0.name = name } }

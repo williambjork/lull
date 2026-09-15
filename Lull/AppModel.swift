@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 import LullCore
 
 /// Owns the service, the ticking clock, and the small amount of derived state
@@ -20,6 +21,10 @@ final class AppModel {
     private(set) var totals: SleepTotals?
     private(set) var trends: [SleepTrendSignal] = []
     private(set) var sleepProfile: BabySleepProfile?
+
+    /// Parent-chosen baby photo, or nil to use the bundled placeholder art.
+    private(set) var babyAvatarImage: UIImage?
+    private(set) var hasCustomBabyAvatar = false
 
     /// Drives the post-sleep summary sheet.
     var lastStopResult: SleepStopResult?
@@ -47,6 +52,7 @@ final class AppModel {
         } catch {
             loadError = "Couldn't read saved sleep data."
         }
+        reloadBabyAvatar()
         refreshDerived()
         startTicking()
     }
@@ -200,9 +206,29 @@ final class AppModel {
         perform { service in try service.updateProfile(transform) }
     }
 
+    func setBabyAvatar(_ image: UIImage) {
+        do {
+            try BabyAvatarStore.save(image)
+            reloadBabyAvatar()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func clearBabyAvatar() {
+        do {
+            try BabyAvatarStore.delete()
+            reloadBabyAvatar()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func deleteAllData() {
         perform { service in
             try service.deleteAllData()
+            try? BabyAvatarStore.delete()
+            self.reloadBabyAvatar()
             self.service = nil
         }
     }
@@ -270,6 +296,11 @@ final class AppModel {
     }
 
     // MARK: - Internals
+
+    private func reloadBabyAvatar() {
+        babyAvatarImage = BabyAvatarStore.load()
+        hasCustomBabyAvatar = BabyAvatarStore.hasCustomAvatar
+    }
 
     private func perform(_ work: (SleepService) throws -> Void) {
         guard let service else { return }

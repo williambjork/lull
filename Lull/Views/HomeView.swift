@@ -65,10 +65,14 @@ struct HomeView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 12) {
+            BabyAvatarButton(size: 44, showsEditBadge: false)
+
             Text(model.babyName)
                 .font(.title3.weight(.semibold))
+
             Spacer()
+
             if let ages = model.ages {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(SleepCopy.ageDescription(ages.effective))
