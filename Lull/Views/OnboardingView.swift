@@ -13,7 +13,8 @@ struct OnboardingView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        LullBrandMark(style: .badge, size: 96)
                         Text("Lull")
                             .font(.largeTitle.bold())
                         Text("Track sleep, and get a sense of when your baby is likely to be ready for the next one.")
@@ -21,6 +22,8 @@ struct OnboardingView: View {
                             .foregroundStyle(Theme.secondaryText)
                     }
                     .padding(.top, 40)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Lull")
 
                     VStack(alignment: .leading, spacing: 18) {
                         VStack(alignment: .leading, spacing: 6) {
