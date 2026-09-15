@@ -46,46 +46,6 @@ struct SettingsView: View {
                         }
                     }
 
-                    Section("Prematurity") {
-                        Toggle("Born prematurely", isOn: Binding(
-                            get: { service.profile.wasPremature },
-                            set: { value in
-                                model.updateProfile {
-                                    $0.wasPremature = value
-                                    if !value {
-                                        $0.gestationalAgeWeeks = nil
-                                        $0.correctedAgeEnabled = false
-                                    } else if $0.gestationalAgeWeeks == nil {
-                                        $0.gestationalAgeWeeks = 34
-                                    }
-                                }
-                            }
-                        ))
-
-                        if service.profile.wasPremature {
-                            Stepper(
-                                "Gestational age: \(service.profile.gestationalAgeWeeks ?? 34) weeks",
-                                value: Binding(
-                                    get: { service.profile.gestationalAgeWeeks ?? 34 },
-                                    set: { weeks in model.updateProfile { $0.gestationalAgeWeeks = weeks } }
-                                ),
-                                in: 22...37
-                            )
-                            Toggle("Use corrected age for estimates", isOn: Binding(
-                                get: { service.profile.correctedAgeEnabled },
-                                set: { value in model.updateProfile { $0.correctedAgeEnabled = value } }
-                            ))
-                            if let corrected = model.ages?.corrected {
-                                HStack {
-                                    Text("Corrected age")
-                                    Spacer()
-                                    Text(SleepCopy.ageDescription(corrected))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-
                     Section("Day") {
                         Picker("New day starts at", selection: Binding(
                             get: { service.dataset.settings.dayStartHour },
