@@ -8,6 +8,23 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    HStack(spacing: 14) {
+                        LullBrandMark(style: .badge, size: 56)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Lull")
+                                .font(.title3.weight(.semibold))
+                            Text("Baby sleep, gently tracked")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                    .listRowBackground(Color.clear)
+                }
+
                 if let service = model.service {
                     Section("Baby") {
                         HStack(spacing: 16) {
