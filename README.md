@@ -59,24 +59,31 @@ history.
 simulator. The app target links the local `LullCore` package; there are no
 external dependencies.
 
-**On a physical iPhone:** the target is iPhone-only (`TARGETED_DEVICE_FAMILY = 1`)
-and signs automatically, but the project deliberately carries no
-`DEVELOPMENT_TEAM`, so a fresh checkout has to be pointed at a team once. Three
-things must be true before the phone appears in Xcode's destination menu; miss
-any of them and Xcode falls back to the build-only *Any iOS Device* placeholder
-and refuses to run with "A build only device cannot be used to run this target".
+**On a physical iPhone:** the target is iPhone-only (`TARGETED_DEVICE_FAMILY = 1`),
+signs automatically against the free personal team in `DEVELOPMENT_TEAM`, and
+uses the bundle identifier `com.williambjork.Lull` — free personal teams register
+bundle identifiers globally, so a generic one such as `com.lull.Lull` is refused
+as "not available". Anyone else building this needs to change both settings to
+their own.
+
+Two things must be true on the phone before it appears in Xcode's destination
+menu; miss either and Xcode falls back to the build-only *Any iOS Device*
+placeholder and refuses to run with "A build only device cannot be used to run
+this target".
 
 1. The phone is unlocked and has answered *Trust This Computer* for this Mac.
-   `xcrun devicectl list devices` must show it as `available`, not as a bare
-   ECID row. A bare ECID row means the pairing never completed.
+   `xcrun devicectl list devices` must show it as `available (paired)`, not as a
+   bare ECID row. A bare ECID row means the pairing never completed.
 2. *Settings → Privacy & Security → Developer Mode* is on. The toggle only
    appears after the phone has been plugged into a Mac running Xcode, and
    turning it on reboots the phone.
-3. An Apple ID is signed in under *Xcode → Settings → Accounts*, and its team is
-   selected in *Signing & Capabilities* for the `Lull` target. Without it the
-   build stops at "Signing for Lull requires a development team". A free
-   personal team works; it may reject `com.lull.Lull` as already in use, in
-   which case give the bundle identifier a personal suffix locally.
+
+Then, on the first install only, iOS refuses to launch the app until its
+developer certificate is trusted: *Settings → General → VPN & Device Management
+→ Apple Development: <your Apple ID> → Trust*. Until that is done the install
+succeeds but the launch fails with "its profile has not been explicitly trusted
+by the user". A free personal team also expires the provisioning profile after
+seven days, so this recurs whenever the profile is reissued.
 
 **Domain logic:** the toolchain on this machine (Command Line Tools only) ships
 neither XCTest nor Swift Testing, so the domain logic is verified by a runnable
