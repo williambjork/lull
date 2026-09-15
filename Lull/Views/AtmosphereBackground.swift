@@ -70,12 +70,12 @@ struct AtmosphereBackground: View {
             let size = min(geo.size.width, geo.size.height) * Theme.atmosphereBlobScale(mood: mood)
             Ellipse()
                 .fill(Theme.atmosphereBlobColor(mood: mood, phase: phase))
-                .frame(width: size * 1.45, height: size)
-                .blur(radius: size * 0.34)
+                .frame(width: size * 1.40, height: size)
+                .blur(radius: size * 0.38)
                 .opacity(Theme.atmosphereBlobOpacity(mood: mood))
                 .position(
-                    x: geo.size.width * 0.5 + offset.width * geo.size.width * 0.26,
-                    y: geo.size.height * 0.30 + offset.height * geo.size.height * 0.18
+                    x: geo.size.width * 0.5 + offset.width * geo.size.width * 0.22,
+                    y: geo.size.height * 0.30 + offset.height * geo.size.height * 0.16
                 )
         }
     }
@@ -111,26 +111,30 @@ struct AtmosphereBackground: View {
 // MARK: - Motion helpers
 
 private enum AtmosphereMotion {
-    /// Slow shared clock; periods shortened so the drift is perceptible without feeling busy.
+    /// Slow shared clock. All downstream motion uses integer harmonics of this phase
+    /// so phase 0 and phase 1 are identical (seamless loop, no restart hitch).
     static func phase(at date: Date, mood: AtmosphereMood) -> Double {
         let period: TimeInterval = switch mood {
-        case .idle: 24
-        case .asleep: 32
-        case .night: 40
+        case .idle: 28
+        case .asleep: 36
+        case .night: 48
         }
         return date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
     }
 
+    /// Offset is continuous and 1-periodic in `phase` (only sin/cos of `2π·phase` and `4π·phase`).
     static func blobOffset(mood: AtmosphereMood, phase: Double) -> CGSize {
         let angle = phase * .pi * 2
         let amp: Double = switch mood {
-        case .idle: 1.35
-        case .asleep: 1.05
-        case .night: 0.85
+        case .idle: 1.05
+        case .asleep: 0.88
+        case .night: 0.70
         }
+        // Same fundamental period as `phase`; small 2× harmonic keeps the path interesting
+        // without the old non-integer `0.85` factor that jumped when the cycle restarted.
         return CGSize(
-            width: cos(angle) * amp,
-            height: sin(angle * 0.85 + 0.6) * amp * 0.95
+            width: (cos(angle) + 0.18 * cos(angle * 2)) * amp,
+            height: (sin(angle + 0.6) + 0.12 * sin(angle * 2)) * amp * 0.90
         )
     }
 
