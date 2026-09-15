@@ -59,6 +59,40 @@ history.
 simulator. The app target links the local `LullCore` package; there are no
 external dependencies.
 
+**On a physical iPhone:** the target is iPhone-only (`TARGETED_DEVICE_FAMILY = 1`),
+signs automatically against the free personal team in `DEVELOPMENT_TEAM`, and
+uses the bundle identifier `com.williambjork.Lull` — free personal teams register
+bundle identifiers globally, so a generic one such as `com.lull.Lull` is refused
+as "not available". Anyone else building this needs to change both settings to
+their own.
+
+Two things must be true on the phone before it appears in Xcode's destination
+menu; miss either and Xcode falls back to the build-only *Any iOS Device*
+placeholder and refuses to run with "A build only device cannot be used to run
+this target".
+
+1. The phone is unlocked and has answered *Trust This Computer* for this Mac.
+   `xcrun devicectl list devices` must show it as `available (paired)`, not as a
+   bare ECID row. A bare ECID row means the pairing never completed.
+2. *Settings → Privacy & Security → Developer Mode* is on. The toggle only
+   appears after the phone has been plugged into a Mac running Xcode, and
+   turning it on reboots the phone.
+
+Then, on the first install only, iOS refuses to launch the app until its
+developer certificate is trusted. The install itself succeeds and the launch
+fails with "its profile has not been explicitly trusted by the user".
+
+Trusting it is *Settings → General → VPN & Device Management → Apple
+Development: <your Apple ID> → Trust*, but that row does not exist on a phone
+that has never been asked to run an untrusted developer's app. Installing the
+app is not enough to make it appear — try to open the app once, from the home
+screen or via Xcode's Run, and let the launch be refused. That refusal is what
+puts the developer into the list, after which the Settings row is there.
+
+A free personal team expires the provisioning profile after seven days, so
+re-signing and this trust step both recur. `xcrun devicectl device profile list
+--device <udid>` shows what is currently on the phone and when it expires.
+
 **Domain logic:** the toolchain on this machine (Command Line Tools only) ships
 neither XCTest nor Swift Testing, so the domain logic is verified by a runnable
 assertion harness instead of a test target:
