@@ -79,11 +79,19 @@ this target".
    turning it on reboots the phone.
 
 Then, on the first install only, iOS refuses to launch the app until its
-developer certificate is trusted: *Settings → General → VPN & Device Management
-→ Apple Development: <your Apple ID> → Trust*. Until that is done the install
-succeeds but the launch fails with "its profile has not been explicitly trusted
-by the user". A free personal team also expires the provisioning profile after
-seven days, so this recurs whenever the profile is reissued.
+developer certificate is trusted. The install itself succeeds and the launch
+fails with "its profile has not been explicitly trusted by the user".
+
+Trusting it is *Settings → General → VPN & Device Management → Apple
+Development: <your Apple ID> → Trust*, but that row does not exist on a phone
+that has never been asked to run an untrusted developer's app. Installing the
+app is not enough to make it appear — try to open the app once, from the home
+screen or via Xcode's Run, and let the launch be refused. That refusal is what
+puts the developer into the list, after which the Settings row is there.
+
+A free personal team expires the provisioning profile after seven days, so
+re-signing and this trust step both recur. `xcrun devicectl device profile list
+--device <udid>` shows what is currently on the phone and when it expires.
 
 **Domain logic:** the toolchain on this machine (Command Line Tools only) ships
 neither XCTest nor Swift Testing, so the domain logic is verified by a runnable
