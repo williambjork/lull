@@ -47,6 +47,7 @@ final class AppModel {
         } catch {
             loadError = "Couldn't read saved sleep data."
         }
+        ScreenshotCapture.seedDemoData(into: self)
         refreshDerived()
         startTicking()
     }
