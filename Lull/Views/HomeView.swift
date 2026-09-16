@@ -223,20 +223,19 @@ struct PredictionBlock: View {
             Text(model.formattedClock(prediction.predictedStartAt))
                 .font(.system(size: 42, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .padding(.top, 4)
+                .padding(.top, 8)
 
             if isInWindow {
                 Text("In the likely window now.")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.awakeAccent)
-                    .padding(.top, 12)
+                    .padding(.top, 10)
             }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 22)
-        .padding(.top, 20)
-        .padding(.bottom, isInWindow ? 20 : 22)
+        .padding(.vertical, 16)
         .background(
             Color.white.opacity(0.05),
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
