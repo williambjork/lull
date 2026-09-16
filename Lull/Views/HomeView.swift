@@ -14,25 +14,34 @@ struct HomeView: View {
         ZStack {
             AtmosphereBackground(mood: model.atmosphereMood)
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    header
+            VStack(spacing: 0) {
+                header
+                    .padding(.horizontal, 20)
 
+                Spacer(minLength: 8)
+
+                Group {
                     if model.isSleeping {
                         sleepingCard
                     } else {
                         awakeCard
                     }
-
-                    ForEach(model.trends) { signal in
-                        TrendBanner(signal: signal)
-                    }
-
-                    RecentSleepsCard()
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+
+                Spacer(minLength: 8)
+
+                if !model.trends.isEmpty {
+                    VStack(spacing: 12) {
+                        ForEach(model.trends) { signal in
+                            TrendBanner(signal: signal)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
@@ -87,37 +96,34 @@ struct HomeView: View {
     }
 
     // MARK: - Awake
-    // Visual hierarchy: Start Sleep (P1) → next-sleep prediction (P2) → awake-for (P3)
+    // Visual hierarchy: next-sleep prediction (compact) → Start Sleep (P1) → awake-for (P3)
 
     private var awakeCard: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 18) {
             Text(SleepCopy.awakeLabel)
                 .font(.caption.weight(.bold))
                 .tracking(2)
                 .foregroundStyle(Theme.awakeAccent)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Keep Start Sleep and next-sleep as one vertical axis.
-            VStack(spacing: 10) {
-                primarySleepButton(
-                    title: "Start Sleep",
-                    tint: Theme.awakeAccent,
-                    action: { model.startSleep() }
-                )
-
-                if let prediction = model.prediction {
-                    PredictionBlock(prediction: prediction)
-                } else {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.secondaryText)
-                        Button("Set today's wake time") { showingWakeTimeSheet = true }
-                            .font(.subheadline.weight(.medium))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if let prediction = model.prediction {
+                PredictionBlock(prediction: prediction)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.secondaryText)
+                    Button("Set today's wake time") { showingWakeTimeSheet = true }
+                        .font(.footnote.weight(.medium))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            primarySleepButton(
+                title: "Start Sleep",
+                tint: Theme.awakeAccent,
+                action: { model.startSleep() }
+            )
 
             awakeForBlock
 
@@ -216,29 +222,29 @@ struct PredictionBlock: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(SleepCopy.predictionHeadline)
-                .font(.footnote.weight(.medium))
-                .tracking(0.4)
+                .font(.caption.weight(.medium))
+                .tracking(0.3)
                 .foregroundStyle(Theme.secondaryText)
 
             Text(model.formattedClock(prediction.predictedStartAt))
-                .font(.system(size: 42, weight: .semibold, design: .rounded))
+                .font(.system(size: 26, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .padding(.top, 8)
+                .padding(.top, 4)
 
             if isInWindow {
                 Text("In the likely window now.")
-                    .font(.footnote.weight(.medium))
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(Theme.awakeAccent)
-                    .padding(.top, 10)
+                    .padding(.top, 4)
             }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 22)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(
             Color.white.opacity(0.05),
-            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
     }
 }
@@ -273,38 +279,6 @@ struct TrendBanner: View {
             }
         }
         .card(padding: 16)
-    }
-}
-
-// MARK: - Recent sleeps
-
-struct RecentSleepsCard: View {
-    @Environment(AppModel.self) private var model
-
-    private var recent: [SleepEvent] {
-        guard let today = model.today else { return [] }
-        let days = [today, model.service?.calendar.adding(days: -1, to: today)].compactMap { $0 }
-        return days
-            .flatMap { model.events(on: $0) }
-            .filter(\.isCompleted)
-            .sorted { $0.startedAt > $1.startedAt }
-            .prefix(4)
-            .map { $0 }
-    }
-
-    var body: some View {
-        if !recent.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Recent sleeps")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Theme.secondaryText)
-
-                ForEach(recent) { event in
-                    SleepRow(event: event)
-                }
-            }
-            .card()
-        }
     }
 }
 
