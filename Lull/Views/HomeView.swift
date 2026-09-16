@@ -19,8 +19,6 @@ struct HomeView: View {
                     header
                         .padding(.horizontal, 20)
 
-                    Spacer(minLength: 0)
-
                     Group {
                         if model.isSleeping {
                             sleepingCard
@@ -29,8 +27,9 @@ struct HomeView: View {
                         }
                     }
                     .padding(.horizontal, 20)
-
-                    Spacer(minLength: 0)
+                    .padding(.top, 20)
+                    .padding(.bottom, model.trends.isEmpty ? 16 : 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                     if !model.trends.isEmpty {
                         VStack(spacing: 12) {
@@ -98,28 +97,25 @@ struct HomeView: View {
     }
 
     // MARK: - Awake
-    // Visual hierarchy: next-sleep prediction (compact) → Start Sleep (P1) → awake-for (P3)
+    // Vertical fill: next-sleep (top) → Start Sleep (center) → awake-for + add (bottom)
 
     private var awakeCard: some View {
-        VStack(spacing: 18) {
-            Text(SleepCopy.awakeLabel)
-                .font(.caption.weight(.bold))
-                .tracking(2)
-                .foregroundStyle(Theme.awakeAccent)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
+        VStack(spacing: 0) {
             if let prediction = model.prediction {
                 PredictionBlock(prediction: prediction)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
-                        .font(.footnote)
+                        .font(.subheadline)
                         .foregroundStyle(Theme.secondaryText)
                     Button("Set today's wake time") { showingWakeTimeSheet = true }
-                        .font(.footnote.weight(.medium))
+                        .font(.subheadline.weight(.medium))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
             }
+
+            Spacer(minLength: 20)
 
             primarySleepButton(
                 title: "Start Sleep",
@@ -127,24 +123,34 @@ struct HomeView: View {
                 action: { model.startSleep() }
             )
 
+            Spacer(minLength: 20)
+
+            awakeBottomBand
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .card(padding: 28)
+    }
+
+    private var awakeBottomBand: some View {
+        HStack(alignment: .center, spacing: 16) {
             awakeForBlock
 
-            Button("Fell asleep earlier, or add details") { showingStartSheet = true }
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
+            Spacer(minLength: 8)
+
+            addSleepIconButton
         }
-        .card(padding: 24)
+        .padding(.top, 4)
     }
 
     @ViewBuilder
     private var awakeForBlock: some View {
         if let awake = model.awakeMinutes {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Awake for")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
                 Text(DurationFormatting.compact(awake))
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .monospacedDigit()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -156,16 +162,31 @@ struct HomeView: View {
         }
     }
 
+    /// Opens `StartSleepSheet` — backdate start or add details (same as the old text link).
+    private var addSleepIconButton: some View {
+        Button {
+            showingStartSheet = true
+        } label: {
+            Image(systemName: "clock.badge.plus")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 56, height: 56)
+                .background(Color.white.opacity(0.08), in: Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(Theme.cardBorder, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Fell asleep earlier, or add details")
+    }
+
     // MARK: - Sleeping
-    // Visual hierarchy: Stop Sleep (P1) → live elapsed timer with seconds
+    // Vertical fill: Stop Sleep (center) → live timer → adjust/cancel
 
     private var sleepingCard: some View {
-        VStack(spacing: 22) {
-            Text(SleepCopy.sleepingLabel)
-                .font(.caption.weight(.bold))
-                .tracking(2)
-                .foregroundStyle(Theme.asleepAccent)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(spacing: 0) {
+            Spacer(minLength: 12)
 
             primarySleepButton(
                 title: "Stop Sleep",
@@ -173,9 +194,11 @@ struct HomeView: View {
                 action: { model.stopSleep() }
             )
 
-            VStack(spacing: 6) {
+            Spacer(minLength: 20)
+
+            VStack(spacing: 8) {
                 Text(DurationFormatting.timer(seconds: model.activeElapsedSeconds ?? 0))
-                    .font(.system(size: 44, weight: .semibold, design: .rounded))
+                    .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .monospacedDigit()
 
                 if let active = model.activeSleep {
@@ -185,29 +208,32 @@ struct HomeView: View {
                 }
             }
 
-            HStack(spacing: 18) {
+            Spacer(minLength: 20)
+
+            HStack(spacing: 24) {
                 Button("Adjust start time") { showingAdjustStart = true }
                 Button("Cancel this sleep", role: .destructive) { model.cancelActiveSleep() }
             }
-            .font(.footnote)
+            .font(.subheadline)
             .foregroundStyle(Theme.secondaryText)
+            .frame(maxWidth: .infinity)
         }
-        .card(padding: 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .card(padding: 28)
     }
 
     private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(.title2.weight(.semibold))
                 .multilineTextAlignment(.center)
-                .frame(width: 168, height: 168)
+                .frame(width: 188, height: 188)
                 .background(tint, in: Circle())
                 .foregroundStyle(Color.black.opacity(0.85))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
     }
 }
 
@@ -224,29 +250,28 @@ struct PredictionBlock: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(SleepCopy.predictionHeadline)
-                .font(.caption.weight(.medium))
-                .tracking(0.3)
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.secondaryText)
 
             Text(model.formattedClock(prediction.predictedStartAt))
-                .font(.system(size: 26, weight: .semibold, design: .rounded))
+                .font(.system(size: 40, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .padding(.top, 4)
+                .padding(.top, 6)
 
             if isInWindow {
                 Text("In the likely window now.")
-                    .font(.caption2.weight(.medium))
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.awakeAccent)
-                    .padding(.top, 4)
+                    .padding(.top, 6)
             }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
         .background(
             Color.white.opacity(0.05),
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
     }
 }
