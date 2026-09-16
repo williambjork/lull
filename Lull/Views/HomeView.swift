@@ -97,23 +97,26 @@ struct HomeView: View {
                 .foregroundStyle(Theme.awakeAccent)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            primarySleepButton(
-                title: "Start Sleep",
-                tint: Theme.awakeAccent,
-                action: { model.startSleep() }
-            )
+            // Keep Start Sleep and next-sleep as one vertical axis.
+            VStack(spacing: 14) {
+                primarySleepButton(
+                    title: "Start Sleep",
+                    tint: Theme.awakeAccent,
+                    action: { model.startSleep() }
+                )
 
-            if let prediction = model.prediction {
-                PredictionBlock(prediction: prediction)
-            } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
-                    Button("Set today's wake time") { showingWakeTimeSheet = true }
-                        .font(.subheadline.weight(.medium))
+                if let prediction = model.prediction {
+                    PredictionBlock(prediction: prediction)
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.secondaryText)
+                        Button("Set today's wake time") { showingWakeTimeSheet = true }
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             awakeForBlock
@@ -206,26 +209,38 @@ struct PredictionBlock: View {
     @Environment(AppModel.self) private var model
     let prediction: SleepPrediction
 
+    private var isInWindow: Bool {
+        prediction.isInWindow(asOf: model.now)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 0) {
             Text(SleepCopy.predictionHeadline)
-                .font(.subheadline.weight(.medium))
+                .font(.footnote.weight(.medium))
+                .tracking(0.3)
                 .foregroundStyle(Theme.secondaryText)
 
             Text(model.formattedClock(prediction.predictedStartAt))
-                .font(.system(size: 34, weight: .semibold, design: .rounded))
+                .font(.system(size: 40, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .padding(.top, 6)
 
-            if prediction.isInWindow(asOf: model.now) {
+            if isInWindow {
                 Text("In the likely window now.")
-                    .font(.caption)
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.awakeAccent)
+                    .padding(.top, 10)
             }
         }
-        .padding(.vertical, 16)
-        .padding(.horizontal, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+        .padding(.bottom, isInWindow ? 18 : 20)
+        .background(
+            Color.white.opacity(0.05),
+            in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+        )
     }
 }
 
