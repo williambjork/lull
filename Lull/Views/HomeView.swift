@@ -14,35 +14,28 @@ struct HomeView: View {
         ZStack {
             AtmosphereBackground(mood: model.atmosphereMood)
 
-            GeometryReader { geo in
-                VStack(spacing: 0) {
-                    header
-                        .padding(.horizontal, 20)
+            VStack(spacing: 0) {
+                header
+                    .padding(.horizontal, 20)
 
-                    Group {
-                        if model.isSleeping {
-                            sleepingCard
-                        } else {
-                            awakeCard
+                if model.isSleeping {
+                    sleepingCard
+                } else {
+                    awakeCard
+                }
+
+                if !model.trends.isEmpty {
+                    VStack(spacing: 12) {
+                        ForEach(model.trends) { signal in
+                            TrendBanner(signal: signal)
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, model.trends.isEmpty ? 16 : 12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    if !model.trends.isEmpty {
-                        VStack(spacing: 12) {
-                            ForEach(model.trends) { signal in
-                                TrendBanner(signal: signal)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 8)
-                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
                 }
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
             }
+            .padding(.bottom, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
@@ -115,7 +108,7 @@ struct HomeView: View {
                 .padding(.horizontal, 4)
             }
 
-            Spacer(minLength: 20)
+            Spacer(minLength: 24)
 
             primarySleepButton(
                 title: "Start Sleep",
@@ -123,12 +116,20 @@ struct HomeView: View {
                 action: { model.startSleep() }
             )
 
-            Spacer(minLength: 20)
+            Spacer(minLength: 24)
 
             awakeBottomBand
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .card(padding: 28)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Theme.cardBorder, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
     }
 
     private var awakeBottomBand: some View {
@@ -140,6 +141,7 @@ struct HomeView: View {
             addSleepIconButton
         }
         .padding(.top, 4)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -167,14 +169,14 @@ struct HomeView: View {
         Button {
             showingStartSheet = true
         } label: {
-            Image(systemName: "clock.badge.plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(Theme.secondaryText)
-                .frame(width: 56, height: 56)
-                .background(Color.white.opacity(0.08), in: Circle())
+            Image(systemName: "plus")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Theme.awakeAccent)
+                .frame(width: 64, height: 64)
+                .background(Color.white.opacity(0.14), in: Circle())
                 .overlay(
                     Circle()
-                        .strokeBorder(Theme.cardBorder, lineWidth: 1)
+                        .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
@@ -218,8 +220,16 @@ struct HomeView: View {
             .foregroundStyle(Theme.secondaryText)
             .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .card(padding: 28)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Theme.cardBorder, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
     }
 
     private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
