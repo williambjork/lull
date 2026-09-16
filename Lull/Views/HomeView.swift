@@ -14,34 +14,36 @@ struct HomeView: View {
         ZStack {
             AtmosphereBackground(mood: model.atmosphereMood)
 
-            VStack(spacing: 0) {
-                header
-                    .padding(.horizontal, 20)
+            GeometryReader { geo in
+                VStack(spacing: 0) {
+                    header
+                        .padding(.horizontal, 20)
 
-                Spacer(minLength: 8)
+                    Spacer(minLength: 0)
 
-                Group {
-                    if model.isSleeping {
-                        sleepingCard
-                    } else {
-                        awakeCard
-                    }
-                }
-                .padding(.horizontal, 20)
-
-                Spacer(minLength: 8)
-
-                if !model.trends.isEmpty {
-                    VStack(spacing: 12) {
-                        ForEach(model.trends) { signal in
-                            TrendBanner(signal: signal)
+                    Group {
+                        if model.isSleeping {
+                            sleepingCard
+                        } else {
+                            awakeCard
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
+
+                    Spacer(minLength: 0)
+
+                    if !model.trends.isEmpty {
+                        VStack(spacing: 12) {
+                            ForEach(model.trends) { signal in
+                                TrendBanner(signal: signal)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
+                    }
                 }
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
