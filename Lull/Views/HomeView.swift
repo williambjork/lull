@@ -98,7 +98,7 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Keep Start Sleep and next-sleep as one vertical axis.
-            VStack(spacing: 14) {
+            VStack(spacing: 10) {
                 primarySleepButton(
                     title: "Start Sleep",
                     tint: Theme.awakeAccent,
@@ -217,26 +217,26 @@ struct PredictionBlock: View {
         VStack(spacing: 0) {
             Text(SleepCopy.predictionHeadline)
                 .font(.footnote.weight(.medium))
-                .tracking(0.3)
+                .tracking(0.4)
                 .foregroundStyle(Theme.secondaryText)
 
             Text(model.formattedClock(prediction.predictedStartAt))
-                .font(.system(size: 40, weight: .semibold, design: .rounded))
+                .font(.system(size: 42, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .padding(.top, 6)
+                .padding(.top, 4)
 
             if isInWindow {
                 Text("In the likely window now.")
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.awakeAccent)
-                    .padding(.top, 10)
+                    .padding(.top, 12)
             }
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.top, 18)
-        .padding(.bottom, isInWindow ? 18 : 20)
+        .padding(.horizontal, 22)
+        .padding(.top, 20)
+        .padding(.bottom, isInWindow ? 20 : 22)
         .background(
             Color.white.opacity(0.05),
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
