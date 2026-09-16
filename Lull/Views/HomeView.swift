@@ -208,25 +208,15 @@ struct PredictionBlock: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text(headline)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Theme.secondaryText)
-                TagLabel(text: prediction.confidence.shortLabel, tint: prediction.confidence.tint)
-            }
+            Text(SleepCopy.predictionHeadline)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.secondaryText)
 
             Text(model.formattedClock(prediction.predictedStartAt))
                 .font(.system(size: 34, weight: .semibold, design: .rounded))
+                .monospacedDigit()
 
-            Text("Based on \(SleepCopy.basedOn(prediction.dataSource))")
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
-
-            if prediction.hasPassed(asOf: model.now) {
-                Text("That window has passed — plenty of babies drift later some days.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.tertiaryText)
-            } else if prediction.isInWindow(asOf: model.now) {
+            if prediction.isInWindow(asOf: model.now) {
                 Text("In the likely window now.")
                     .font(.caption)
                     .foregroundStyle(Theme.awakeAccent)
@@ -236,11 +226,6 @@ struct PredictionBlock: View {
         .padding(.horizontal, 18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
-    }
-
-    private var headline: String {
-        let title = SleepCopy.nextSleepTitle(prediction)
-        return "\(SleepCopy.predictionHeadline) · \(title)"
     }
 }
 
