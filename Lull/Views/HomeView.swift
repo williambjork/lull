@@ -14,25 +14,28 @@ struct HomeView: View {
         ZStack {
             AtmosphereBackground(mood: model.atmosphereMood)
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    header
+            VStack(spacing: 0) {
+                header
+                    .padding(.horizontal, 20)
 
-                    if model.isSleeping {
-                        sleepingCard
-                    } else {
-                        awakeCard
-                    }
-
-                    ForEach(model.trends) { signal in
-                        TrendBanner(signal: signal)
-                    }
-
-                    RecentSleepsCard()
+                if model.isSleeping {
+                    sleepingCard
+                } else {
+                    awakeCard
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+
+                if !model.trends.isEmpty {
+                    VStack(spacing: 12) {
+                        ForEach(model.trends) { signal in
+                            TrendBanner(signal: signal)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                }
             }
+            .padding(.bottom, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
@@ -87,22 +90,10 @@ struct HomeView: View {
     }
 
     // MARK: - Awake
-    // Visual hierarchy: Start Sleep (P1) → next-sleep prediction (P2) → awake-for (P3)
+    // Vertical fill: next-sleep (top) → Start Sleep (center) → awake-for + add (bottom)
 
     private var awakeCard: some View {
-        VStack(spacing: 22) {
-            Text(SleepCopy.awakeLabel)
-                .font(.caption.weight(.bold))
-                .tracking(2)
-                .foregroundStyle(Theme.awakeAccent)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            primarySleepButton(
-                title: "Start Sleep",
-                tint: Theme.awakeAccent,
-                action: { model.startSleep() }
-            )
-
+        VStack(spacing: 0) {
             if let prediction = model.prediction {
                 PredictionBlock(prediction: prediction)
             } else {
@@ -114,26 +105,54 @@ struct HomeView: View {
                         .font(.subheadline.weight(.medium))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
             }
 
+            Spacer(minLength: 24)
+
+            primarySleepButton(
+                title: "Start Sleep",
+                tint: Theme.awakeAccent,
+                action: { model.startSleep() }
+            )
+
+            Spacer(minLength: 24)
+
+            awakeBottomBand
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Theme.cardBorder, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+    }
+
+    private var awakeBottomBand: some View {
+        HStack(alignment: .center, spacing: 16) {
             awakeForBlock
 
-            Button("Fell asleep earlier, or add details") { showingStartSheet = true }
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
+            Spacer(minLength: 8)
+
+            addSleepIconButton
         }
-        .card(padding: 24)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
     private var awakeForBlock: some View {
         if let awake = model.awakeMinutes {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Awake for")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText)
                 Text(DurationFormatting.compact(awake))
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .monospacedDigit()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -145,16 +164,31 @@ struct HomeView: View {
         }
     }
 
+    /// Opens `StartSleepSheet` — backdate start or add details (same as the old text link).
+    private var addSleepIconButton: some View {
+        Button {
+            showingStartSheet = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Theme.awakeAccent)
+                .frame(width: 64, height: 64)
+                .background(Color.white.opacity(0.14), in: Circle())
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Fell asleep earlier, or add details")
+    }
+
     // MARK: - Sleeping
-    // Visual hierarchy: Stop Sleep (P1) → live elapsed timer with seconds
+    // Vertical fill: Stop Sleep (center) → live timer → adjust/cancel
 
     private var sleepingCard: some View {
-        VStack(spacing: 22) {
-            Text(SleepCopy.sleepingLabel)
-                .font(.caption.weight(.bold))
-                .tracking(2)
-                .foregroundStyle(Theme.asleepAccent)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(spacing: 0) {
+            Spacer(minLength: 12)
 
             primarySleepButton(
                 title: "Stop Sleep",
@@ -162,9 +196,11 @@ struct HomeView: View {
                 action: { model.stopSleep() }
             )
 
-            VStack(spacing: 6) {
+            Spacer(minLength: 20)
+
+            VStack(spacing: 8) {
                 Text(DurationFormatting.timer(seconds: model.activeElapsedSeconds ?? 0))
-                    .font(.system(size: 44, weight: .semibold, design: .rounded))
+                    .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .monospacedDigit()
 
                 if let active = model.activeSleep {
@@ -174,29 +210,40 @@ struct HomeView: View {
                 }
             }
 
-            HStack(spacing: 18) {
+            Spacer(minLength: 20)
+
+            HStack(spacing: 24) {
                 Button("Adjust start time") { showingAdjustStart = true }
                 Button("Cancel this sleep", role: .destructive) { model.cancelActiveSleep() }
             }
-            .font(.footnote)
+            .font(.subheadline)
             .foregroundStyle(Theme.secondaryText)
+            .frame(maxWidth: .infinity)
         }
-        .card(padding: 24)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Theme.cardBorder, lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
     }
 
     private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(.title2.weight(.semibold))
                 .multilineTextAlignment(.center)
-                .frame(width: 168, height: 168)
+                .frame(width: 188, height: 188)
                 .background(tint, in: Circle())
                 .foregroundStyle(Color.black.opacity(0.85))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 4)
     }
 }
 
@@ -206,26 +253,36 @@ struct PredictionBlock: View {
     @Environment(AppModel.self) private var model
     let prediction: SleepPrediction
 
+    private var isInWindow: Bool {
+        prediction.isInWindow(asOf: model.now)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 0) {
             Text(SleepCopy.predictionHeadline)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.secondaryText)
 
             Text(model.formattedClock(prediction.predictedStartAt))
-                .font(.system(size: 34, weight: .semibold, design: .rounded))
+                .font(.system(size: 40, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .padding(.top, 6)
 
-            if prediction.isInWindow(asOf: model.now) {
+            if isInWindow {
                 Text("In the likely window now.")
-                    .font(.caption)
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.awakeAccent)
+                    .padding(.top, 6)
             }
         }
-        .padding(.vertical, 16)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
+        .padding(.vertical, 16)
+        .background(
+            Color.white.opacity(0.05),
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
     }
 }
 
@@ -259,38 +316,6 @@ struct TrendBanner: View {
             }
         }
         .card(padding: 16)
-    }
-}
-
-// MARK: - Recent sleeps
-
-struct RecentSleepsCard: View {
-    @Environment(AppModel.self) private var model
-
-    private var recent: [SleepEvent] {
-        guard let today = model.today else { return [] }
-        let days = [today, model.service?.calendar.adding(days: -1, to: today)].compactMap { $0 }
-        return days
-            .flatMap { model.events(on: $0) }
-            .filter(\.isCompleted)
-            .sorted { $0.startedAt > $1.startedAt }
-            .prefix(4)
-            .map { $0 }
-    }
-
-    var body: some View {
-        if !recent.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Recent sleeps")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Theme.secondaryText)
-
-                ForEach(recent) { event in
-                    SleepRow(event: event)
-                }
-            }
-            .card()
-        }
     }
 }
 
