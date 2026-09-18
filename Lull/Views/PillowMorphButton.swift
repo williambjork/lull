@@ -5,10 +5,16 @@ import SwiftUI
 struct PillowMorphButton: View {
     let title: String
     let tint: Color
-    var size: CGFloat = 188
+    /// Visual diameter of the resting circle (morph expands slightly inside the frame).
+    var size: CGFloat = 220
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Frame includes room so outward lobes are not clipped.
+    private var viewportSize: CGFloat {
+        size * CGFloat(1 + PillowMorph.maxOutset) + PillowMorph.viewportPad
+    }
 
     var body: some View {
         Button(action: action) {
@@ -19,7 +25,7 @@ struct PillowMorphButton: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.black.opacity(0.85))
             }
-            .frame(width: size, height: size)
+            .frame(width: viewportSize, height: viewportSize)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
@@ -30,10 +36,15 @@ struct PillowMorphButton: View {
         if reduceMotion {
             Circle()
                 .fill(tint)
+                .frame(width: size, height: size)
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
                 Canvas { graphics, canvasSize in
-                    let path = PillowMorph.path(in: canvasSize, at: timeline.date)
+                    let path = PillowMorph.path(
+                        in: canvasSize,
+                        restingDiameter: size,
+                        at: timeline.date
+                    )
                     graphics.fill(path, with: .color(tint))
                 }
             }
@@ -51,6 +62,12 @@ private enum PillowMorph {
     static let a1: Double = 0.030
     static let a2: Double = 0.022
 
+    /// Worst-case radial growth as a fraction of resting radius.
+    static var maxOutset: Double { a1 + a2 }
+
+    /// Extra points beyond the math max so antialiasing isn’t clipped.
+    static let viewportPad: CGFloat = 4
+
     static let sampleCount = 72
 
     /// Continuous φ so `0.7·φ` never hitch at wrap (integer-harmonic lesson).
@@ -64,9 +81,9 @@ private enum PillowMorph {
             + a2 * sin(3 * theta - 0.7 * phi)
     }
 
-    static func path(in size: CGSize, at date: Date) -> Path {
+    static func path(in size: CGSize, restingDiameter: CGFloat, at date: Date) -> Path {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        let baseRadius = Double(min(size.width, size.height) / 2)
+        let baseRadius = Double(restingDiameter / 2)
         let phi = phaseAngle(at: date)
 
         var path = Path()
