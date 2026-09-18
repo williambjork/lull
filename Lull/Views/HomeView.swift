@@ -18,10 +18,14 @@ struct HomeView: View {
                 header
                     .padding(.horizontal, 20)
 
-                if model.isSleeping {
-                    sleepingCard
-                } else {
-                    awakeCard
+                Spacer(minLength: 12)
+
+                Group {
+                    if model.isSleeping {
+                        sleepingCard
+                    } else {
+                        awakeCard
+                    }
                 }
 
                 if !model.trends.isEmpty {
@@ -31,9 +35,10 @@ struct HomeView: View {
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 8)
+                    .padding(.top, 12)
                 }
+
+                Spacer(minLength: 12)
             }
             .padding(.bottom, 8)
         }
@@ -90,10 +95,10 @@ struct HomeView: View {
     }
 
     // MARK: - Awake
-    // Vertical fill: next-sleep (top) → Start Sleep (center) → awake-for + add (bottom)
+    // Content-sized card: prediction → Start Sleep → awake-for + add
 
     private var awakeCard: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 28) {
             if let prediction = model.prediction {
                 PredictionBlock(prediction: prediction)
             } else {
@@ -108,28 +113,23 @@ struct HomeView: View {
                 .padding(.horizontal, 4)
             }
 
-            Spacer(minLength: 24)
-
             primarySleepButton(
                 title: "Start Sleep",
                 tint: Theme.awakeAccent,
                 action: { model.startSleep() }
             )
 
-            Spacer(minLength: 24)
-
             awakeBottomBand
         }
         .padding(.horizontal, 28)
-        .padding(.vertical, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .strokeBorder(Theme.cardBorder, lineWidth: 1)
         )
         .padding(.horizontal, 16)
-        .padding(.top, 12)
     }
 
     private var awakeBottomBand: some View {
@@ -140,7 +140,6 @@ struct HomeView: View {
 
             addSleepIconButton
         }
-        .padding(.top, 4)
         .frame(maxWidth: .infinity)
     }
 
@@ -184,19 +183,15 @@ struct HomeView: View {
     }
 
     // MARK: - Sleeping
-    // Vertical fill: Stop Sleep (center) → live timer → adjust/cancel
+    // Content-sized card: Stop Sleep → live timer → adjust/cancel
 
     private var sleepingCard: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 12)
-
+        VStack(spacing: 24) {
             primarySleepButton(
                 title: "Stop Sleep",
                 tint: Theme.asleepAccent,
                 action: { model.stopSleep() }
             )
-
-            Spacer(minLength: 20)
 
             VStack(spacing: 8) {
                 Text(DurationFormatting.timer(seconds: model.activeElapsedSeconds ?? 0))
@@ -210,8 +205,6 @@ struct HomeView: View {
                 }
             }
 
-            Spacer(minLength: 20)
-
             HStack(spacing: 24) {
                 Button("Adjust start time") { showingAdjustStart = true }
                 Button("Cancel this sleep", role: .destructive) { model.cancelActiveSleep() }
@@ -221,15 +214,14 @@ struct HomeView: View {
             .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 28)
-        .padding(.vertical, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .strokeBorder(Theme.cardBorder, lineWidth: 1)
         )
         .padding(.horizontal, 16)
-        .padding(.top, 12)
     }
 
     private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
