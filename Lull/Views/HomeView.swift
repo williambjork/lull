@@ -233,17 +233,8 @@ struct HomeView: View {
     }
 
     private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.title2.weight(.semibold))
-                .multilineTextAlignment(.center)
-                .frame(width: 188, height: 188)
-                .background(tint, in: Circle())
-                .foregroundStyle(Color.black.opacity(0.85))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .frame(maxWidth: .infinity)
+        PillowMorphButton(title: title, tint: tint, action: action)
+            .frame(maxWidth: .infinity)
     }
 }
 
