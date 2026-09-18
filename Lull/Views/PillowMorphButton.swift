@@ -6,7 +6,7 @@ struct PillowMorphButton: View {
     let title: String
     let tint: Color
     /// Visual diameter of the resting circle (morph expands slightly inside the frame).
-    var size: CGFloat = 220
+    var size: CGFloat = 252
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -58,9 +58,9 @@ private enum PillowMorph {
     /// Sleepy loop length — within the 8–12s plan range.
     static let period: TimeInterval = 10
 
-    /// Edge amplitudes as a fraction of radius (~0.02–0.035).
-    static let a1: Double = 0.030
-    static let a2: Double = 0.022
+    /// Edge amplitudes as a fraction of radius (kept near the low end of ~0.02–0.035).
+    static let a1: Double = 0.024
+    static let a2: Double = 0.017
 
     /// Worst-case radial growth as a fraction of resting radius.
     static var maxOutset: Double { a1 + a2 }
