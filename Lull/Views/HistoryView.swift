@@ -73,11 +73,6 @@ struct DayHeader: View {
                         get: { summary.isUnusual },
                         set: { model.setDayUnusual($0, day: summary.day) }
                     ))
-                    ForEach(SleepContext.allCases, id: \.self) { context in
-                        Button(SleepCopy.contextLabel(context)) {
-                            model.setDayUnusual(true, day: summary.day, contexts: [.unusualDay, context])
-                        }
-                    }
                 } label: {
                     Image(systemName: summary.isUnusual ? "flag.fill" : "flag")
                         .font(.footnote)
@@ -130,8 +125,6 @@ struct SleepDetailView: View {
     @State private var endedAt = Date()
     @State private var location: SleepLocation?
     @State private var method: SleepMethod?
-    @State private var cues: Set<SleepCue> = []
-    @State private var contexts: Set<SleepContext> = []
     @State private var notes = ""
     @State private var loaded = false
 
@@ -198,17 +191,6 @@ struct SleepDetailView: View {
                     }
                 }
 
-                Section("Sleepy cues") {
-                    CuePicker(selection: $cues)
-                }
-
-                Section("Tags") {
-                    ContextPicker(selection: $contexts)
-                    Text("Tags explain unusual sleeps. They never change the estimate on their own.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
                 Section("Notes") {
                     TextField("Anything worth remembering", text: $notes, axis: .vertical)
                 }
@@ -241,8 +223,6 @@ struct SleepDetailView: View {
         endedAt = event.endedAt ?? Date()
         location = event.sleepLocation
         method = event.sleepMethod
-        cues = Set(event.sleepCuesObserved)
-        contexts = Set(event.contexts)
         notes = event.notes ?? ""
         loaded = true
     }
@@ -255,8 +235,6 @@ struct SleepDetailView: View {
             endedAt: event.isCompleted ? endedAt : nil,
             location: location,
             method: method,
-            cues: Array(cues),
-            contexts: Array(contexts),
             notes: notes.isEmpty ? nil : notes
         )
     }
@@ -271,8 +249,6 @@ struct AddSleepView: View {
     @State private var typeSelection: SleepType?
     @State private var location: SleepLocation?
     @State private var method: SleepMethod?
-    @State private var cues: Set<SleepCue> = []
-    @State private var contexts: Set<SleepContext> = []
     @State private var notes = ""
 
     var body: some View {
@@ -312,14 +288,6 @@ struct AddSleepView: View {
                     }
                 }
 
-                Section("Sleepy cues") {
-                    CuePicker(selection: $cues)
-                }
-
-                Section("Tags") {
-                    ContextPicker(selection: $contexts)
-                }
-
                 Section("Notes") {
                     TextField("Anything worth remembering", text: $notes, axis: .vertical)
                 }
@@ -337,8 +305,6 @@ struct AddSleepView: View {
                             type: typeSelection,
                             location: location,
                             method: method,
-                            cues: Array(cues),
-                            contexts: Array(contexts),
                             notes: notes.isEmpty ? nil : notes
                         )
                         dismiss()
@@ -347,37 +313,5 @@ struct AddSleepView: View {
                 }
             }
         }
-    }
-}
-
-struct ContextPicker: View {
-    @Binding var selection: Set<SleepContext>
-
-    private let columns = [GridItem(.adaptive(minimum: 130), spacing: 8)]
-
-    var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-            ForEach(SleepContext.allCases, id: \.self) { context in
-                Button {
-                    if selection.contains(context) {
-                        selection.remove(context)
-                    } else {
-                        selection.insert(context)
-                    }
-                } label: {
-                    Text(SleepCopy.contextLabel(context))
-                        .font(.footnote)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            selection.contains(context) ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.06),
-                            in: Capsule()
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.vertical, 4)
     }
 }

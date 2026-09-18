@@ -1,88 +1,12 @@
 import SwiftUI
 import LullCore
 
-/// Shown right after the parent stops the timer: what just happened, and what
-/// is probably next.
-struct SleepSummarySheet: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    let result: SleepStopResult
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 26) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(SleepCopy.eventTitle(result.event))
-                        .font(.title3.weight(.semibold))
-                    Text(DurationFormatting.compact(result.event.durationMinutes ?? 0))
-                        .font(.system(size: 44, weight: .semibold, design: .rounded))
-                }
-
-                if let window = result.event.wakeWindowBeforeMinutes {
-                    labelled("Previous wake window", value: DurationFormatting.compact(window))
-                }
-
-                if let prediction = result.prediction {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Next sleep likely · \(SleepCopy.nextSleepTitle(prediction))")
-                            .font(.footnote)
-                            .foregroundStyle(Theme.secondaryText)
-                        Text(model.formattedClock(prediction.predictedStartAt))
-                            .font(.system(size: 30, weight: .semibold, design: .rounded))
-                        Text("Based on \(SleepCopy.basedOn(prediction.dataSource))")
-                            .font(.caption)
-                            .foregroundStyle(Theme.tertiaryText)
-                    }
-                }
-
-                Spacer()
-
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Done")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(Theme.awakeAccent, in: RoundedRectangle(cornerRadius: 18))
-                        .foregroundStyle(Color.black.opacity(0.85))
-                }
-            }
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background {
-                // Sheet hosts size `.background` correctly; ZStack would fight NavigationStack chrome.
-                AtmosphereBackground(mood: .idle)
-            }
-            .foregroundStyle(.white)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink("Edit") { SleepDetailView(eventId: result.event.id) }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-
-    private func labelled(_ label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.footnote)
-                .foregroundStyle(Theme.secondaryText)
-            Text(value)
-                .font(.title3.weight(.medium))
-                .monospacedDigit()
-        }
-    }
-}
-
-/// Start a sleep that began a little while ago, with optional context.
+/// Start a sleep that began a little while ago.
 struct StartSleepSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
     @State private var startedAt = Date()
-    @State private var cues: Set<SleepCue> = []
     @State private var location: SleepLocation?
 
     var body: some View {
@@ -103,10 +27,6 @@ struct StartSleepSheet: View {
                         }
                     }
                 }
-
-                Section("Sleepy cues you noticed") {
-                    CuePicker(selection: $cues)
-                }
             }
             .navigationTitle("Start sleep")
             .toolbar {
@@ -115,7 +35,7 @@ struct StartSleepSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Start") {
-                        model.startSleep(at: startedAt, cues: Array(cues), location: location)
+                        model.startSleep(at: startedAt, location: location)
                         dismiss()
                     }
                 }
@@ -200,37 +120,5 @@ struct WakeTimeSheet: View {
             }
         }
         .presentationDetents([.medium])
-    }
-}
-
-struct CuePicker: View {
-    @Binding var selection: Set<SleepCue>
-
-    private let columns = [GridItem(.adaptive(minimum: 110), spacing: 8)]
-
-    var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-            ForEach(SleepCue.allCases, id: \.self) { cue in
-                Button {
-                    if selection.contains(cue) {
-                        selection.remove(cue)
-                    } else {
-                        selection.insert(cue)
-                    }
-                } label: {
-                    Text(SleepCopy.cueLabel(cue))
-                        .font(.footnote)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            selection.contains(cue) ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.06),
-                            in: Capsule()
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.vertical, 4)
     }
 }

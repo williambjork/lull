@@ -50,16 +50,6 @@ struct HomeView: View {
         .sheet(isPresented: $showingWakeTimeSheet) {
             WakeTimeSheet()
         }
-        .sheet(
-            isPresented: Binding(
-                get: { model.lastStopResult != nil },
-                set: { if !$0 { model.lastStopResult = nil } }
-            )
-        ) {
-            if let result = model.lastStopResult {
-                SleepSummarySheet(result: result)
-            }
-        }
     }
 
     // MARK: - Header

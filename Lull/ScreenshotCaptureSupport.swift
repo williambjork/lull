@@ -79,8 +79,6 @@ enum ScreenshotCapture {
             type: .nap,
             location: .crib,
             method: .independent,
-            cues: [.yawning],
-            contexts: [],
             notes: nil
         )
         model.addPastSleep(
@@ -89,8 +87,6 @@ enum ScreenshotCapture {
             type: .nap,
             location: .stroller,
             method: .other,
-            cues: [.fussy],
-            contexts: [],
             notes: nil
         )
         model.addPastSleep(
@@ -99,8 +95,6 @@ enum ScreenshotCapture {
             type: .night,
             location: .crib,
             method: .feeding,
-            cues: [],
-            contexts: [],
             notes: nil
         )
         model.addPastSleep(
@@ -109,8 +103,6 @@ enum ScreenshotCapture {
             type: .nap,
             location: .crib,
             method: .rocking,
-            cues: [.eyeRubbing, .yawning],
-            contexts: [],
             notes: nil
         )
     }

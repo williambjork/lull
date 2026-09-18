@@ -91,24 +91,6 @@ struct InsightsView: View {
                     }
                 }
 
-                let cues = model.cueStats()
-                if !cues.isEmpty {
-                    Section("Sleepy cues you record most") {
-                        ForEach(cues) { stat in
-                            row(
-                                SleepCopy.cueLabel(stat.cue),
-                                "\(stat.occurrences) sleeps",
-                                detail: stat.medianSleepDurationMinutes.map {
-                                    "usually sleeps \(DurationFormatting.compact($0))"
-                                }
-                            )
-                        }
-                        Text("Early days: this is descriptive only, not a prediction.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
                 Section {
                     Text(SleepCopy.disclaimer)
                         .font(.caption)

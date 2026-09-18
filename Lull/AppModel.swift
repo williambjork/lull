@@ -25,8 +25,6 @@ final class AppModel {
     private(set) var babyAvatarImage: UIImage?
     private(set) var hasCustomBabyAvatar = false
 
-    /// Drives the post-sleep summary sheet.
-    var lastStopResult: SleepStopResult?
     var errorMessage: String?
 
     private let repository: any SleepRepository
@@ -107,16 +105,15 @@ final class AppModel {
 
     // MARK: - Timer
 
-    func startSleep(at startedAt: Date? = nil, cues: [SleepCue] = [], location: SleepLocation? = nil) {
+    func startSleep(at startedAt: Date? = nil, location: SleepLocation? = nil) {
         perform { service in
-            try service.startSleep(at: startedAt ?? Date(), location: location, cues: cues)
+            try service.startSleep(at: startedAt ?? Date(), location: location)
         }
     }
 
     func stopSleep() {
         perform { service in
             let result = try service.stopSleep(at: Date())
-            self.lastStopResult = result
             if let prediction = result.prediction {
                 try service.recordShownPrediction(prediction)
             }
@@ -139,8 +136,6 @@ final class AppModel {
         type: SleepType?,
         location: SleepLocation?,
         method: SleepMethod?,
-        cues: [SleepCue],
-        contexts: [SleepContext],
         notes: String?
     ) {
         perform { service in
@@ -150,8 +145,6 @@ final class AppModel {
                 type: type,
                 location: location,
                 method: method,
-                cues: cues,
-                contexts: contexts,
                 notes: notes
             )
         }
@@ -163,8 +156,6 @@ final class AppModel {
         endedAt: Date?,
         location: SleepLocation?,
         method: SleepMethod?,
-        cues: [SleepCue],
-        contexts: [SleepContext],
         notes: String?
     ) {
         perform { service in
@@ -174,8 +165,6 @@ final class AppModel {
                 endedAt: .some(endedAt),
                 location: .some(location),
                 method: .some(method),
-                cues: cues,
-                contexts: contexts,
                 notes: .some(notes)
             )
         }
@@ -250,10 +239,6 @@ final class AppModel {
 
     func events(on day: SleepDay) -> [SleepEvent] {
         service?.events(on: day) ?? []
-    }
-
-    func cueStats() -> [SleepCueStat] {
-        service?.cueStats() ?? []
     }
 
     var agePrior: AgeWakeWindowPrior? {
