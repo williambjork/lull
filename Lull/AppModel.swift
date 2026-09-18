@@ -25,6 +25,8 @@ final class AppModel {
     private(set) var babyAvatarImage: UIImage?
     private(set) var hasCustomBabyAvatar = false
 
+    /// Drives the post-sleep summary sheet.
+    var lastStopResult: SleepStopResult?
     var errorMessage: String?
 
     private let repository: any SleepRepository
@@ -114,6 +116,7 @@ final class AppModel {
     func stopSleep() {
         perform { service in
             let result = try service.stopSleep(at: Date())
+            self.lastStopResult = result
             if let prediction = result.prediction {
                 try service.recordShownPrediction(prediction)
             }

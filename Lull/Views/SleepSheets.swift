@@ -1,6 +1,61 @@
 import SwiftUI
 import LullCore
 
+/// Shown right after the parent stops the timer: how long that sleep was, and
+/// roughly when the baby may be ready again.
+struct SleepSummarySheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let result: SleepStopResult
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(SleepCopy.durationLabel(for: result.event))
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                    Text(DurationFormatting.compact(result.event.durationMinutes ?? 0))
+                        .font(.system(size: 44, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                }
+
+                if let prediction = result.prediction {
+                    Text(
+                        SleepCopy.readyAgain(
+                            name: model.babyName,
+                            minutesUntilReady: prediction.targetWakeWindowMinutes,
+                            nextType: prediction.expectedType
+                        )
+                    )
+                    .font(.title3.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(Theme.awakeAccent, in: RoundedRectangle(cornerRadius: 18))
+                        .foregroundStyle(Color.black.opacity(0.85))
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background {
+                AtmosphereBackground(mood: .idle)
+            }
+            .foregroundStyle(.white)
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
 /// Start a sleep that began a little while ago.
 struct StartSleepSheet: View {
     @Environment(AppModel.self) private var model

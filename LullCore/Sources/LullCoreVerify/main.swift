@@ -873,6 +873,14 @@ expect.suite("Formatting keeps the tone right") {
     expect.equal(DurationFormatting.timer(seconds: 272), "4:32", "sub-hour live timer")
     expect.equal(DurationFormatting.timer(seconds: 3922), "1:05:22", "hour-plus live timer")
     expect.equal(DurationFormatting.approximate(140), "~2h 20m", "approximate duration")
+    expect.equal(DurationFormatting.spoken(135), "2 hours and 15 minutes", "spoken hours and minutes")
+    expect.equal(DurationFormatting.spoken(60), "1 hour", "spoken single hour")
+    expect.equal(DurationFormatting.spoken(45), "45 minutes", "spoken minutes only")
+    expect.equal(
+        SleepCopy.readyAgain(name: "Astrid", minutesUntilReady: 135, nextType: .nap),
+        "Astrid should be ready for a nap in around 2 hours and 15 minutes",
+        "ready-again nap copy"
+    )
     expect.equal(
         DurationFormatting.approximateHourRange(minMinutes: 120, maxMinutes: 240),
         "~2–4 hours",

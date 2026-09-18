@@ -28,6 +28,21 @@ public enum DurationFormatting {
         "~" + compact(minutes)
     }
 
+    /// "2 hours and 15 minutes", "1 hour", "45 minutes" — spoken estimates.
+    public static func spoken(_ minutes: Int) -> String {
+        let total = max(0, minutes)
+        let hours = total / 60
+        let remainder = total % 60
+        switch (hours, remainder) {
+        case (0, let m):
+            return "\(m) minute\(m == 1 ? "" : "s")"
+        case (let h, 0):
+            return "\(h) hour\(h == 1 ? "" : "s")"
+        case (let h, let m):
+            return "\(h) hour\(h == 1 ? "" : "s") and \(m) minute\(m == 1 ? "" : "s")"
+        }
+    }
+
     /// "~2–4 hours" for broad age guidance.
     public static func approximateHourRange(minMinutes: Int, maxMinutes: Int) -> String {
         "~\(hours(minMinutes))–\(hours(maxMinutes)) hours"
@@ -113,6 +128,25 @@ public enum SleepCopy {
         case .nap:
             if let index = event.napIndex { return "Nap \(index)" }
             return "Nap"
+        }
+    }
+
+    /// Label for the just-finished sleep's length on the stop sheet.
+    public static func durationLabel(for event: SleepEvent) -> String {
+        switch event.type {
+        case .nap: "Nap duration"
+        case .night: "Night sleep duration"
+        }
+    }
+
+    /// "{name} should be ready for a nap in around 2 hours and 15 minutes"
+    public static func readyAgain(name: String, minutesUntilReady: Int, nextType: SleepType) -> String {
+        let when = DurationFormatting.spoken(minutesUntilReady)
+        switch nextType {
+        case .nap:
+            return "\(name) should be ready for a nap in around \(when)"
+        case .night:
+            return "\(name) should be ready for bedtime in around \(when)"
         }
     }
 
