@@ -44,6 +44,7 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(.white)
+        .onAppear(perform: prepareScrubPreviewIfNeeded)
         .sheet(isPresented: $showingStartSheet) {
             StartSleepSheet()
         }
@@ -212,22 +213,36 @@ struct HomeView: View {
 
     /// Same chrome as `PredictionBlock` — existing Started clock in the top slot.
     /// Primary hold+drag scrub target (also mirrored on “Asleep for”).
+    /// While adjusting, the clock becomes an Alarm-style ghost minute wheel.
     private var sleepingStartedBlock: some View {
         let startedAt = startScrub.draftStartedAt ?? model.activeSleep?.startedAt ?? model.now
         return VStack(spacing: 0) {
             Text("Started")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(startScrub.isAdjusting ? Theme.asleepAccent.opacity(0.9) : Theme.secondaryText)
-            Text(model.formattedClock(startedAt))
-                .font(.system(size: 40, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .padding(.top, 6)
-                .foregroundStyle(startScrub.isAdjusting ? Theme.asleepAccent : .white)
+
+            Group {
+                if startScrub.isAdjusting {
+                    StartTimeScrubWheel(
+                        center: startedAt,
+                        fractionalOffset: startScrub.wheelFractionalOffset,
+                        format: { model.formattedClock($0) }
+                    )
+                    .padding(.top, 4)
+                } else {
+                    Text(model.formattedClock(startedAt))
+                        .font(.system(size: 40, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .padding(.top, 6)
+                        .foregroundStyle(.white)
+                }
+            }
+            .animation(.easeOut(duration: 0.18), value: startScrub.isAdjusting)
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 18)
-        .padding(.vertical, 16)
+        .padding(.vertical, startScrub.isAdjusting ? 12 : 16)
         .background(
             Color.white.opacity(startScrub.isAdjusting ? 0.09 : 0.05),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -256,6 +271,16 @@ struct HomeView: View {
     private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
         PillowMorphButton(title: title, tint: tint, action: action)
             .frame(maxWidth: .infinity)
+    }
+
+    /// Screenshot-only: show the ghost minute wheel without a real finger hold.
+    private func prepareScrubPreviewIfNeeded() {
+        guard ScreenshotCapture.scrubPreview else { return }
+        guard model.isSleeping else { return }
+        guard !startScrub.isAdjusting else { return }
+        startScrub.begin(model: model)
+        // ~3 minutes earlier so neighbors are visible above/below.
+        startScrub.applyDrag(-36, model: model)
     }
 }
 

@@ -6,6 +6,7 @@ import LullCore
 /// Recognized arguments:
 /// - `-UIScreen <name>` — `onboarding`, `home`, `history`, `patterns`, or `settings`
 /// - `-UIDemoSeed` — wipe local data and install a small demo baby + recent sleeps
+/// - `-UIScrubPreview` — enter hold-scrub adjust mode on Home (ghost minute wheel)
 enum ScreenshotCapture {
     enum Screen: String {
         case onboarding
@@ -40,6 +41,12 @@ enum ScreenshotCapture {
 
     static var shouldSeedDemoData: Bool {
         ProcessInfo.processInfo.arguments.contains("-UIDemoSeed")
+    }
+
+    /// Forces sleeping UI into hold-scrub adjust mode for screenshot capture.
+    /// Pair with `-UIDemoSeed` (and ideally start an active sleep first).
+    static var scrubPreview: Bool {
+        ProcessInfo.processInfo.arguments.contains("-UIScrubPreview")
     }
 
     static var forceOnboarding: Bool {
@@ -105,5 +112,9 @@ enum ScreenshotCapture {
             method: .rocking,
             notes: nil
         )
+
+        if scrubPreview {
+            model.startSleep()
+        }
     }
 }

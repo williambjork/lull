@@ -91,22 +91,32 @@ private final class PassThroughView: UIView {
 final class ActiveStartScrubSession {
     var draftStartedAt: Date?
     var isAdjusting = false
+    /// Continuous minute delta from the hold origin (for wheel scroll between snaps).
+    var exactMinuteDelta: Double = 0
 
     private var baseStartedAt: Date?
     private var lastHapticMinute: Int?
+
+    /// Fractional remainder after the snapped minute (−0.5…0.5) for smooth wheel offset.
+    var wheelFractionalOffset: Double {
+        exactMinuteDelta - Double(Int(exactMinuteDelta.rounded()))
+    }
 
     func begin(model: AppModel) {
         guard !isAdjusting, let active = model.activeSleep else { return }
         isAdjusting = true
         baseStartedAt = active.startedAt
         draftStartedAt = active.startedAt
+        exactMinuteDelta = 0
         lastHapticMinute = 0
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     func applyDrag(_ translationHeight: CGFloat, model: AppModel) {
         guard isAdjusting, let base = baseStartedAt else { return }
-        let deltaMinutes = ScrubMapping.minuteDelta(translationHeight: translationHeight)
+        let exact = ScrubMapping.exactMinuteDelta(translationHeight: translationHeight)
+        exactMinuteDelta = exact
+        let deltaMinutes = Int(exact.rounded())
         let proposed = base.addingTimeInterval(TimeInterval(-deltaMinutes * 60))
         let clamped = min(proposed, model.now)
         let earliest = model.now.addingTimeInterval(-ScrubMapping.maxLookback)
@@ -124,6 +134,7 @@ final class ActiveStartScrubSession {
             baseStartedAt = nil
             lastHapticMinute = nil
             draftStartedAt = nil
+            exactMinuteDelta = 0
         }
         guard let draft = draftStartedAt,
               let active = model.activeSleep,
@@ -149,6 +160,76 @@ extension View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
             }
+    }
+}
+
+// MARK: - Alarm-style ghost minute wheel
+
+/// In-place clock column: crisp center minute, faded neighbors above/below,
+/// soft gradient mask at the edges (Apple Alarm / wheel picker feel).
+struct StartTimeScrubWheel: View {
+    let center: Date
+    /// Continuous residual after snap (−0.5…0.5); positive → column shifts down
+    /// (earlier times from above move toward center).
+    var fractionalOffset: Double = 0
+    var format: (Date) -> String
+
+    private let neighborCount = 2
+    private let rowHeight: CGFloat = 40
+
+    var body: some View {
+        let rows = (-neighborCount...neighborCount).map { $0 }
+
+        ZStack {
+            ForEach(rows, id: \.self) { offset in
+                let date = center.addingTimeInterval(TimeInterval(-offset * 60))
+                let distance = abs(offset)
+                Text(format(date))
+                    .font(.system(
+                        size: distance == 0 ? 40 : 32,
+                        weight: distance == 0 ? .semibold : .regular,
+                        design: .rounded
+                    ))
+                    .monospacedDigit()
+                    .foregroundStyle(color(for: distance))
+                    .opacity(opacity(for: distance))
+                    .scaleEffect(distance == 0 ? 1 : 0.92)
+                    .frame(height: rowHeight)
+                    // Earlier (positive offset) sits above; later below.
+                    // fractionalOffset shifts the column during inter-minute drag.
+                    .offset(y: CGFloat(-offset) * rowHeight + CGFloat(fractionalOffset) * rowHeight)
+                    .zIndex(distance == 0 ? 1 : 0)
+            }
+        }
+        .frame(height: rowHeight * CGFloat(neighborCount * 2 + 1))
+        .frame(maxWidth: .infinity)
+        .mask {
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black.opacity(0.55), location: 0.14),
+                    .init(color: .black, location: 0.32),
+                    .init(color: .black, location: 0.68),
+                    .init(color: .black.opacity(0.55), location: 0.86),
+                    .init(color: .clear, location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func opacity(for distance: Int) -> Double {
+        switch distance {
+        case 0: 1
+        case 1: 0.38
+        default: 0.16
+        }
+    }
+
+    private func color(for distance: Int) -> Color {
+        distance == 0 ? Theme.asleepAccent : Color.white.opacity(0.85)
     }
 }
 
@@ -196,11 +277,16 @@ enum ScrubMapping {
     /// Drag **up** (negative height) → earlier start / longer elapsed.
     /// Drag **down** → later start / shorter elapsed.
     static func minuteDelta(translationHeight: CGFloat) -> Int {
+        Int(exactMinuteDelta(translationHeight: translationHeight).rounded())
+    }
+
+    /// Continuous minute delta for wheel scroll between snapped values.
+    static func exactMinuteDelta(translationHeight: CGFloat) -> Double {
         let y = -translationHeight
-        let sign: CGFloat = y >= 0 ? 1 : -1
-        let distance = abs(y)
-        let fine = min(distance, fineBandPoints) / pointsPerMinute
-        let coarse = max(0, distance - fineBandPoints) / pointsPerFiveMinutes * 5
-        return Int((sign * (fine + coarse)).rounded())
+        let sign: Double = y >= 0 ? 1 : -1
+        let distance = abs(Double(y))
+        let fine = min(distance, Double(fineBandPoints)) / Double(pointsPerMinute)
+        let coarse = max(0, distance - Double(fineBandPoints)) / Double(pointsPerFiveMinutes) * 5
+        return sign * (fine + coarse)
     }
 }
