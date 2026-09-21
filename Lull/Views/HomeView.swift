@@ -226,9 +226,9 @@ struct HomeView: View {
                     StartTimeScrubWheel(
                         center: startedAt,
                         fractionalOffset: startScrub.wheelFractionalOffset,
-                        format: { model.formattedClock($0) }
+                        timeZone: model.timeZone
                     )
-                    .padding(.top, 4)
+                    .padding(.top, 2)
                 } else {
                     Text(model.formattedClock(startedAt))
                         .font(.system(size: 40, weight: .semibold, design: .rounded))
@@ -241,8 +241,8 @@ struct HomeView: View {
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 18)
-        .padding(.vertical, startScrub.isAdjusting ? 12 : 16)
+        .padding(.horizontal, startScrub.isAdjusting ? 10 : 18)
+        .padding(.vertical, startScrub.isAdjusting ? 10 : 16)
         .background(
             Color.white.opacity(startScrub.isAdjusting ? 0.09 : 0.05),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
