@@ -33,18 +33,16 @@ struct AtmosphereBackground: View {
             Theme.background
             if reduceMotion {
                 staticAtmosphere
+                grainOverlay(seed: 0)
+                // Upward-flow motes are motion — hide when Reduce Motion is on.
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { context in
-                    driftingAtmosphere(at: context.date)
-                }
-            }
-            grainOverlay(seed: 0)
-            // Motes above grain so they stay readable; still behind Home cards.
-            if reduceMotion {
-                moteField(at: nil)
-            } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { context in
-                    moteField(at: context.date)
+                // One TimelineView: atmosphere + motes (fixed pool, single Canvas).
+                TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { context in
+                    ZStack {
+                        driftingAtmosphere(at: context.date)
+                        grainOverlay(seed: 0)
+                        moteField(at: context.date)
+                    }
                 }
             }
         }
@@ -115,22 +113,17 @@ struct AtmosphereBackground: View {
         .allowsHitTesting(false)
     }
 
-    /// Soft fairy-forest / Hollow Knight motes — behind cards.
-    /// `date == nil` freezes positions (Reduce Motion).
-    private func moteField(at date: Date?) -> some View {
+    /// Soft fairy-forest motes: fixed pool, bottom → top recycle, one Canvas.
+    private func moteField(at date: Date) -> some View {
         Canvas { context, size in
-            for mote in AtmosphereMotes.specs {
-                let point = AtmosphereMotes.position(mote, at: date, in: size)
-                let radius = mote.radius
-                let rect = CGRect(
-                    x: point.x - radius,
-                    y: point.y - radius,
-                    width: radius * 2,
-                    height: radius * 2
-                )
+            let t = date.timeIntervalSinceReferenceDate
+            for slot in AtmosphereMotes.pool {
+                let point = AtmosphereMotes.position(slot, time: t, in: size)
+                let r = slot.radius
+                let rect = CGRect(x: point.x - r, y: point.y - r, width: r * 2, height: r * 2)
                 context.fill(
                     Path(ellipseIn: rect),
-                    with: .color(AtmosphereMotes.color(mote, mood: mood))
+                    with: .color(AtmosphereMotes.color(slot, mood: mood))
                 )
             }
         }
@@ -173,94 +166,83 @@ private enum AtmosphereMotion {
     }
 }
 
-// MARK: - Floating motes
+// MARK: - Floating motes (fixed pool, upward flow)
 
-/// Deterministic soft dots that drift slowly — ethereal but noticeable.
+/// Fixed-size particle pool. Positions are pure functions of time — exiting the
+/// top wraps to the bottom (recycle) with no allocations or growing arrays.
 private enum AtmosphereMotes {
-    struct Spec: Sendable {
-        let seed: Int
-        /// Rest position in unit space (0…1), biased off the center card band.
-        let origin: CGPoint
+    /// Soft count — quieter than the visibility-debug 56.
+    static let poolSize = 28
+
+    struct Slot: Sendable {
+        let index: Int
+        /// Horizontal rest (0…1).
+        let x: Double
+        /// Screen-heights per second (slow rise).
+        let speed: Double
+        /// Phase offset in [0, 1) along the vertical loop.
+        let phase: Double
         let radius: CGFloat
         let opacity: Double
-        let periodX: TimeInterval
-        let periodY: TimeInterval
-        let phaseX: Double
-        let phaseY: Double
-        let ampX: CGFloat
-        let ampY: CGFloat
+        let swayAmp: CGFloat
+        let swayPeriod: TimeInterval
+        let swayPhase: Double
     }
 
-    static let specs: [Spec] = (0..<56).map(makeSpec)
+    static let pool: [Slot] = (0..<poolSize).map(makeSlot)
 
-    private static func makeSpec(_ index: Int) -> Spec {
+    private static func makeSlot(_ index: Int) -> Slot {
         let h = AtmosphereMotion.grainHash(x: index * 17, y: index * 91, seed: 4_201)
         let h2 = AtmosphereMotion.grainHash(x: index * 3, y: index * 51, seed: 9_001)
-        // Prefer margins / upper / lower atmosphere so dots aren’t hidden under the card.
-        let lane = index % 4
-        let ox: Double
-        let oy: Double
-        switch lane {
-        case 0: // left edge
-            ox = 0.04 + Double(h % 220) / 1000
-            oy = Double(h2 % 1000) / 1000
-        case 1: // right edge
-            ox = 0.78 + Double(h % 200) / 1000
-            oy = Double(h2 % 1000) / 1000
-        case 2: // top band
-            ox = Double(h % 1000) / 1000
-            oy = 0.04 + Double(h2 % 200) / 1000
-        default: // bottom band
-            ox = Double(h % 1000) / 1000
-            oy = 0.72 + Double(h2 % 250) / 1000
-        }
+        let x = Double(h % 1000) / 1000
+        // Full-screen rise in ~28–55s.
+        let riseSeconds = 28.0 + Double(h % 28)
+        let speed = 1.0 / riseSeconds
+        let phase = Double(h2 % 1000) / 1000
         let sizeBucket = h % 10
         let radius: CGFloat = switch sizeBucket {
-        case 0, 1: 1.4
-        case 2, 3, 4: 2.2
-        case 5, 6, 7: 3.2
-        case 8: 4.2
-        default: 5.5
+        case 0, 1, 2: 0.9
+        case 3, 4, 5: 1.4
+        case 6, 7: 2.0
+        case 8: 2.5
+        default: 3.0
         }
-        // Noticeable but still soft (was ~0.07–0.21 — too faint on device).
-        let opacity = 0.22 + Double(h % 20) / 100
-        let periodX = 18.0 + Double(h % 17)
-        let periodY = 22.0 + Double(h2 % 19)
-        let ampScale = 0.018 + CGFloat(h % 10) / 700
-        return Spec(
-            seed: index,
-            origin: CGPoint(x: ox, y: oy),
+        // Softer than the visibility bump (~0.22–0.42).
+        let opacity = 0.11 + Double(h % 10) / 100
+        let swayAmp = 4 + CGFloat(h % 8)
+        let swayPeriod = 9.0 + Double(h2 % 11)
+        return Slot(
+            index: index,
+            x: x,
+            speed: speed,
+            phase: phase,
             radius: radius,
             opacity: opacity,
-            periodX: periodX,
-            periodY: periodY,
-            phaseX: Double(h % 628) / 100,
-            phaseY: Double(h2 % 628) / 100,
-            ampX: ampScale * (index % 2 == 0 ? 1.0 : 1.35),
-            ampY: ampScale * 1.5
+            swayAmp: swayAmp,
+            swayPeriod: swayPeriod,
+            swayPhase: Double(h % 628) / 100
         )
     }
 
-    static func position(_ mote: Spec, at date: Date?, in size: CGSize) -> CGPoint {
-        let edge = min(size.width, size.height)
-        var x = mote.origin.x * size.width
-        var y = mote.origin.y * size.height
-        if let date {
-            let t = date.timeIntervalSinceReferenceDate
-            x += sin(t * 2 * .pi / mote.periodX + mote.phaseX) * mote.ampX * edge
-            y += cos(t * 2 * .pi / mote.periodY + mote.phaseY) * mote.ampY * edge
-        }
+    /// Progress 0 = just entered at bottom; 1 = leaving top — then wraps (recycle).
+    static func position(_ slot: Slot, time t: TimeInterval, in size: CGSize) -> CGPoint {
+        let travel = size.height + slot.radius * 2
+        var progress = slot.phase + t * slot.speed
+        progress -= progress.rounded(.down) // fract → [0, 1)
+        let y = size.height + slot.radius - CGFloat(progress) * travel
+        let sway = sin(t * 2 * .pi / slot.swayPeriod + slot.swayPhase) * slot.swayAmp
+        let x = CGFloat(slot.x) * size.width + sway
         return CGPoint(x: x, y: y)
     }
 
-    static func color(_ mote: Spec, mood: AtmosphereMood) -> Color {
+    static func color(_ slot: Slot, mood: AtmosphereMood) -> Color {
         switch mood {
         case .idle:
-            Color(red: 1.0, green: 0.97, blue: 0.90).opacity(mote.opacity)
+            Color(red: 1.0, green: 0.97, blue: 0.90).opacity(slot.opacity)
         case .asleep:
-            Color(red: 0.88, green: 0.92, blue: 1.0).opacity(mote.opacity * 0.95)
+            Color(red: 0.88, green: 0.92, blue: 1.0).opacity(slot.opacity * 0.92)
         case .night:
-            Color(red: 0.78, green: 0.85, blue: 1.0).opacity(mote.opacity * 0.85)
+            Color(red: 0.78, green: 0.85, blue: 1.0).opacity(slot.opacity * 0.80)
         }
     }
 }
