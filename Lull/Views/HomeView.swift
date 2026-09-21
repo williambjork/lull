@@ -8,8 +8,7 @@ struct HomeView: View {
 
     @State private var showingStartSheet = false
     @State private var showingWakeTimeSheet = false
-    @State private var scrubDraftStartedAt: Date?
-    @State private var isScrubbingStart = false
+    @State private var startScrub = ActiveStartScrubSession()
 
     var body: some View {
         ZStack {
@@ -192,10 +191,7 @@ struct HomeView: View {
             )
 
             HStack(alignment: .center, spacing: 16) {
-                ScrubbableActiveSleepTime(
-                    draftStartedAt: $scrubDraftStartedAt,
-                    isAdjusting: $isScrubbingStart
-                )
+                ScrubbableActiveSleepTime(session: startScrub)
 
                 Spacer(minLength: 8)
 
@@ -215,26 +211,31 @@ struct HomeView: View {
     }
 
     /// Same chrome as `PredictionBlock` — existing Started clock in the top slot.
+    /// Primary hold+drag scrub target (also mirrored on “Asleep for”).
     private var sleepingStartedBlock: some View {
-        let startedAt = scrubDraftStartedAt ?? model.activeSleep?.startedAt ?? model.now
+        let startedAt = startScrub.draftStartedAt ?? model.activeSleep?.startedAt ?? model.now
         return VStack(spacing: 0) {
             Text("Started")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(startScrub.isAdjusting ? Theme.asleepAccent.opacity(0.9) : Theme.secondaryText)
             Text(model.formattedClock(startedAt))
                 .font(.system(size: 40, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .padding(.top, 6)
-                .foregroundStyle(isScrubbingStart ? Theme.asleepAccent : .white)
+                .foregroundStyle(startScrub.isAdjusting ? Theme.asleepAccent : .white)
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
         .background(
-            Color.white.opacity(0.05),
+            Color.white.opacity(startScrub.isAdjusting ? 0.09 : 0.05),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
+        .activeStartScrub(session: startScrub, model: model)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Started \(model.formattedClock(startedAt))")
+        .accessibilityHint("Touch and hold, then drag up or down to adjust the start time")
     }
 
     /// Same 64×64 trailing slot as the awake “+”.

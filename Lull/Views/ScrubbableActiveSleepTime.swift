@@ -2,60 +2,100 @@ import SwiftUI
 import UIKit
 import LullCore
 
-/// Bottom-slot elapsed timer (with seconds). Hold, then drag vertically to scrub
-/// the active sleep's start time in place (no sheet / DatePicker).
-struct ScrubbableActiveSleepTime: View {
-    @Environment(AppModel.self) private var model
+/// Hold, then drag vertically to scrub the active sleep's start time in place
+/// (no sheet / DatePicker). Uses UIKit long-press so the recognizer keeps
+/// tracking after the hold — SwiftUI `LongPress.sequenced(before: Drag)` often
+/// never delivers the drag on device.
+struct ActiveStartScrubOverlay: UIViewRepresentable {
+    var holdDuration: Double = ScrubMapping.holdDuration
+    var onBegan: () -> Void
+    var onChanged: (_ translationHeight: CGFloat) -> Void
+    var onEnded: () -> Void
 
-    @Binding var draftStartedAt: Date?
-    @Binding var isAdjusting: Bool
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onBegan: onBegan, onChanged: onChanged, onEnded: onEnded)
+    }
 
-    @State private var baseStartedAt: Date?
-    @State private var lastHapticMinute: Int?
+    func makeUIView(context: Context) -> UIView {
+        let view = PassThroughView()
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = true
 
-    var body: some View {
-        let startedAt = draftStartedAt ?? model.activeSleep?.startedAt ?? model.now
-        let elapsedSeconds = max(0, Int(model.now.timeIntervalSince(startedAt)))
+        let press = UILongPressGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handle(_:))
+        )
+        press.minimumPressDuration = holdDuration
+        // Allow a full vertical scrub without cancelling the hold.
+        press.allowableMovement = 10_000
+        press.cancelsTouchesInView = false
+        view.addGestureRecognizer(press)
+        context.coordinator.recognizer = press
+        return view
+    }
 
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Asleep for")
-                .font(.subheadline)
-                .foregroundStyle(isAdjusting ? Theme.asleepAccent.opacity(0.9) : Theme.secondaryText)
-            Text(DurationFormatting.timer(seconds: elapsedSeconds))
-                .font(.system(size: 36, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(isAdjusting ? Theme.asleepAccent : .white)
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onBegan = onBegan
+        context.coordinator.onChanged = onChanged
+        context.coordinator.onEnded = onEnded
+        context.coordinator.recognizer?.minimumPressDuration = holdDuration
+    }
+
+    final class Coordinator: NSObject {
+        var onBegan: () -> Void
+        var onChanged: (CGFloat) -> Void
+        var onEnded: () -> Void
+        weak var recognizer: UILongPressGestureRecognizer?
+        private var originY: CGFloat?
+
+        init(
+            onBegan: @escaping () -> Void,
+            onChanged: @escaping (CGFloat) -> Void,
+            onEnded: @escaping () -> Void
+        ) {
+            self.onBegan = onBegan
+            self.onChanged = onChanged
+            self.onEnded = onEnded
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
-        .gesture(scrubGesture)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Sleep timer")
-        .accessibilityValue("\(DurationFormatting.timer(seconds: elapsedSeconds)), started \(model.formattedClock(startedAt))")
-        .accessibilityHint("Touch and hold, then drag up or down to adjust the start time")
-    }
 
-    private var scrubGesture: some Gesture {
-        LongPressGesture(minimumDuration: ScrubMapping.holdDuration)
-            .sequenced(before: DragGesture(minimumDistance: 0))
-            .onChanged { value in
-                switch value {
-                case .first(true):
-                    beginAdjustIfNeeded()
-                case .second(true, let drag):
-                    beginAdjustIfNeeded()
-                    guard let drag, let base = baseStartedAt else { return }
-                    applyDrag(drag.translation.height, from: base)
-                default:
-                    break
-                }
+        @objc func handle(_ gr: UILongPressGestureRecognizer) {
+            let y = gr.location(in: gr.view).y
+            switch gr.state {
+            case .began:
+                originY = y
+                onBegan()
+            case .changed:
+                guard let originY else { return }
+                onChanged(y - originY)
+            case .ended, .cancelled, .failed:
+                originY = nil
+                onEnded()
+            default:
+                break
             }
-            .onEnded { _ in
-                commitAdjust()
-            }
+        }
     }
+}
 
-    private func beginAdjustIfNeeded() {
+/// Transparent hit target that still receives touches for the overlay recognizer.
+private final class PassThroughView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        bounds.contains(point) ? self : nil
+    }
+}
+
+// MARK: - Shared scrub session (one instance for Started + Asleep for)
+
+@MainActor
+@Observable
+final class ActiveStartScrubSession {
+    var draftStartedAt: Date?
+    var isAdjusting = false
+
+    private var baseStartedAt: Date?
+    private var lastHapticMinute: Int?
+
+    func begin(model: AppModel) {
         guard !isAdjusting, let active = model.activeSleep else { return }
         isAdjusting = true
         baseStartedAt = active.startedAt
@@ -64,7 +104,8 @@ struct ScrubbableActiveSleepTime: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
-    private func applyDrag(_ translationHeight: CGFloat, from base: Date) {
+    func applyDrag(_ translationHeight: CGFloat, model: AppModel) {
+        guard isAdjusting, let base = baseStartedAt else { return }
         let deltaMinutes = ScrubMapping.minuteDelta(translationHeight: translationHeight)
         let proposed = base.addingTimeInterval(TimeInterval(-deltaMinutes * 60))
         let clamped = min(proposed, model.now)
@@ -77,7 +118,7 @@ struct ScrubbableActiveSleepTime: View {
         }
     }
 
-    private func commitAdjust() {
+    func commit(model: AppModel) {
         defer {
             isAdjusting = false
             baseStartedAt = nil
@@ -93,10 +134,56 @@ struct ScrubbableActiveSleepTime: View {
     }
 }
 
+extension View {
+    /// Full-bleed hold→scrub→commit overlay. Safe to apply on multiple sibling
+    /// time labels that share one `ActiveStartScrubSession`.
+    func activeStartScrub(session: ActiveStartScrubSession, model: AppModel) -> some View {
+        self
+            .contentShape(Rectangle())
+            .overlay {
+                ActiveStartScrubOverlay(
+                    onBegan: { session.begin(model: model) },
+                    onChanged: { session.applyDrag($0, model: model) },
+                    onEnded: { session.commit(model: model) }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+    }
+}
+
+/// Bottom-slot elapsed timer (with seconds). Hold + vertical drag scrubs start.
+struct ScrubbableActiveSleepTime: View {
+    @Environment(AppModel.self) private var model
+    var session: ActiveStartScrubSession
+
+    var body: some View {
+        let startedAt = session.draftStartedAt ?? model.activeSleep?.startedAt ?? model.now
+        let elapsedSeconds = max(0, Int(model.now.timeIntervalSince(startedAt)))
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Asleep for")
+                .font(.subheadline)
+                .foregroundStyle(session.isAdjusting ? Theme.asleepAccent.opacity(0.9) : Theme.secondaryText)
+            Text(DurationFormatting.timer(seconds: elapsedSeconds))
+                .font(.system(size: 36, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(session.isAdjusting ? Theme.asleepAccent : .white)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8)
+        .activeStartScrub(session: session, model: model)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Sleep timer")
+        .accessibilityValue("\(DurationFormatting.timer(seconds: elapsedSeconds)), started \(model.formattedClock(startedAt))")
+        .accessibilityHint("Touch and hold, then drag up or down to adjust the start time")
+    }
+}
+
 // MARK: - Drag → minutes
 
 enum ScrubMapping {
-    static let holdDuration: Double = 0.35
+    static let holdDuration: Double = 0.28
     /// Cap how far back a scrub can push the start.
     static let maxLookback: TimeInterval = 18 * 3600
 
