@@ -7,8 +7,13 @@ struct HomeView: View {
     @Environment(AppModel.self) private var model
 
     @State private var showingStartSheet = false
-    @State private var showingAdjustStart = false
     @State private var showingWakeTimeSheet = false
+    @State private var scrubDraftStartedAt: Date?
+    @State private var isScrubbingStart = false
+
+    /// Shared card slots so Start ↔ Stop don’t hop.
+    private let topSlotMinHeight: CGFloat = 120
+    private let bottomSlotMinHeight: CGFloat = 64
 
     var body: some View {
         ZStack {
@@ -20,13 +25,7 @@ struct HomeView: View {
 
                 Spacer(minLength: 12)
 
-                Group {
-                    if model.isSleeping {
-                        sleepingCard
-                    } else {
-                        awakeCard
-                    }
-                }
+                homeCard
 
                 if !model.trends.isEmpty {
                     VStack(spacing: 12) {
@@ -46,11 +45,6 @@ struct HomeView: View {
         .foregroundStyle(.white)
         .sheet(isPresented: $showingStartSheet) {
             StartSleepSheet()
-        }
-        .sheet(isPresented: $showingAdjustStart) {
-            if let active = model.activeSleep {
-                AdjustStartSheet(event: active)
-            }
         }
         .sheet(isPresented: $showingWakeTimeSheet) {
             WakeTimeSheet()
@@ -94,32 +88,30 @@ struct HomeView: View {
         .padding(.top, 8)
     }
 
-    // MARK: - Awake
-    // Content-sized card: prediction → Start Sleep → awake-for + add
+    // MARK: - Shared card skeleton
+    // Top status → primary round button → bottom meta row (same slots awake & sleeping)
 
-    private var awakeCard: some View {
+    private var homeCard: some View {
         VStack(spacing: 28) {
-            if let prediction = model.prediction {
-                PredictionBlock(prediction: prediction)
+            topSlot
+                .frame(maxWidth: .infinity, minHeight: topSlotMinHeight, alignment: .center)
+
+            if model.isSleeping {
+                primarySleepButton(
+                    title: "Stop Sleep",
+                    tint: Theme.asleepAccent,
+                    action: { model.stopSleep() }
+                )
             } else {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
-                    Button("Set today's wake time") { showingWakeTimeSheet = true }
-                        .font(.subheadline.weight(.medium))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
+                primarySleepButton(
+                    title: "Start Sleep",
+                    tint: Theme.awakeAccent,
+                    action: { model.startSleep() }
+                )
             }
 
-            primarySleepButton(
-                title: "Start Sleep",
-                tint: Theme.awakeAccent,
-                action: { model.startSleep() }
-            )
-
-            awakeBottomBand
+            bottomBand
+                .frame(maxWidth: .infinity, minHeight: bottomSlotMinHeight, alignment: .center)
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 28)
@@ -132,13 +124,66 @@ struct HomeView: View {
         .padding(.horizontal, 16)
     }
 
-    private var awakeBottomBand: some View {
+    @ViewBuilder
+    private var topSlot: some View {
+        if model.isSleeping {
+            sleepingStartedBlock
+        } else if let prediction = model.prediction {
+            PredictionBlock(prediction: prediction)
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Tell Nana when your baby woke up and it can estimate the next sleep.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText)
+                Button("Set today's wake time") { showingWakeTimeSheet = true }
+                    .font(.subheadline.weight(.medium))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+        }
+    }
+
+    /// Mirrors `PredictionBlock` chrome — existing "Started" clock, top slot.
+    private var sleepingStartedBlock: some View {
+        let startedAt = scrubDraftStartedAt ?? model.activeSleep?.startedAt ?? model.now
+        return VStack(spacing: 0) {
+            Text("Started")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.secondaryText)
+            Text(model.formattedClock(startedAt))
+                .font(.system(size: 40, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .padding(.top, 6)
+                .foregroundStyle(isScrubbingStart ? Theme.asleepAccent : .white)
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(
+            Color.white.opacity(0.05),
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
+    }
+
+    private var bottomBand: some View {
         HStack(alignment: .center, spacing: 16) {
-            awakeForBlock
+            if model.isSleeping {
+                ScrubbableActiveSleepTime(
+                    draftStartedAt: $scrubDraftStartedAt,
+                    isAdjusting: $isScrubbingStart
+                )
+            } else {
+                awakeForBlock
+            }
 
             Spacer(minLength: 8)
 
-            addSleepIconButton
+            if model.isSleeping {
+                cancelSleepButton
+            } else {
+                addSleepIconButton
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -182,46 +227,19 @@ struct HomeView: View {
         .accessibilityLabel("Fell asleep earlier, or add details")
     }
 
-    // MARK: - Sleeping
-    // Content-sized card: Stop Sleep → live timer → adjust/cancel
-
-    private var sleepingCard: some View {
-        VStack(spacing: 24) {
-            primarySleepButton(
-                title: "Stop Sleep",
-                tint: Theme.asleepAccent,
-                action: { model.stopSleep() }
-            )
-
-            VStack(spacing: 8) {
-                Text(DurationFormatting.timer(seconds: model.activeElapsedSeconds ?? 0))
-                    .font(.system(size: 52, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-
-                if let active = model.activeSleep {
-                    Text("Started \(model.formattedClock(active.startedAt))")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
-                }
-            }
-
-            HStack(spacing: 24) {
-                Button("Adjust start time") { showingAdjustStart = true }
-                Button("Cancel this sleep", role: .destructive) { model.cancelActiveSleep() }
-            }
-            .font(.subheadline)
-            .foregroundStyle(Theme.secondaryText)
-            .frame(maxWidth: .infinity)
+    /// Same 64×64 trailing slot as the awake “+” so the band doesn’t jump.
+    private var cancelSleepButton: some View {
+        Button {
+            model.cancelActiveSleep()
+        } label: {
+            Text("Cancel")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 64, height: 64)
+                .multilineTextAlignment(.center)
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 28)
-        .frame(maxWidth: .infinity)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(Theme.cardBorder, lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
+        .buttonStyle(.plain)
+        .accessibilityLabel("Cancel this sleep")
     }
 
     private func primarySleepButton(title: String, tint: Color, action: @escaping () -> Void) -> some View {
@@ -256,6 +274,12 @@ struct PredictionBlock: View {
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Theme.awakeAccent)
                     .padding(.top, 6)
+            } else {
+                // Reserve the footnote line so Start ↔ Stop top slots share height.
+                Text("In the likely window now.")
+                    .font(.footnote.weight(.medium))
+                    .padding(.top, 6)
+                    .hidden()
             }
         }
         .multilineTextAlignment(.center)

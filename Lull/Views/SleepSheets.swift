@@ -99,49 +99,6 @@ struct StartSleepSheet: View {
     }
 }
 
-/// Correcting the start time of a running timer. The duration is never edited
-/// directly — it always follows from the start and end times.
-struct AdjustStartSheet: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    let event: SleepEvent
-
-    @State private var startedAt: Date
-
-    init(event: SleepEvent) {
-        self.event = event
-        _startedAt = State(initialValue: event.startedAt)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Fell asleep at") {
-                    DatePicker("Time", selection: $startedAt, in: ...Date(), displayedComponents: [.hourAndMinute])
-                }
-                Section {
-                    Text("Duration is always calculated from the start and wake times, so correcting the start is all you need.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .navigationTitle("Adjust start")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        model.adjustActiveStart(to: startedAt)
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}
-
 /// Lets a parent anchor the day when nothing has been tracked yet.
 struct WakeTimeSheet: View {
     @Environment(AppModel.self) private var model
