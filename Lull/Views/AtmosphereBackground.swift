@@ -33,16 +33,20 @@ struct AtmosphereBackground: View {
             Theme.background
             if reduceMotion {
                 staticAtmosphere
-                moteField(at: nil)
             } else {
                 TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { context in
-                    ZStack {
-                        driftingAtmosphere(at: context.date)
-                        moteField(at: context.date)
-                    }
+                    driftingAtmosphere(at: context.date)
                 }
             }
             grainOverlay(seed: 0)
+            // Motes above grain so they stay readable; still behind Home cards.
+            if reduceMotion {
+                moteField(at: nil)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { context in
+                    moteField(at: context.date)
+                }
+            }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -111,7 +115,7 @@ struct AtmosphereBackground: View {
         .allowsHitTesting(false)
     }
 
-    /// Soft fairy-forest / Hollow Knight motes — behind cards, under grain.
+    /// Soft fairy-forest / Hollow Knight motes — behind cards.
     /// `date == nil` freezes positions (Reduce Motion).
     private func moteField(at date: Date?) -> some View {
         Canvas { context, size in
@@ -171,44 +175,58 @@ private enum AtmosphereMotion {
 
 // MARK: - Floating motes
 
-/// Deterministic soft dots that drift slowly — ethereal, never loud.
+/// Deterministic soft dots that drift slowly — ethereal but noticeable.
 private enum AtmosphereMotes {
     struct Spec: Sendable {
         let seed: Int
-        /// Rest position in unit space (0…1).
+        /// Rest position in unit space (0…1), biased off the center card band.
         let origin: CGPoint
         let radius: CGFloat
         let opacity: Double
-        /// Drift periods (seconds) — continuous sin/cos, no wrap hitch.
         let periodX: TimeInterval
         let periodY: TimeInterval
         let phaseX: Double
         let phaseY: Double
-        /// Drift amplitude as a fraction of the shorter screen edge.
         let ampX: CGFloat
         let ampY: CGFloat
     }
 
-    static let specs: [Spec] = (0..<42).map(makeSpec)
+    static let specs: [Spec] = (0..<56).map(makeSpec)
 
     private static func makeSpec(_ index: Int) -> Spec {
         let h = AtmosphereMotion.grainHash(x: index * 17, y: index * 91, seed: 4_201)
         let h2 = AtmosphereMotion.grainHash(x: index * 3, y: index * 51, seed: 9_001)
-        let ox = Double(h % 1000) / 1000
-        let oy = Double(h2 % 1000) / 1000
+        // Prefer margins / upper / lower atmosphere so dots aren’t hidden under the card.
+        let lane = index % 4
+        let ox: Double
+        let oy: Double
+        switch lane {
+        case 0: // left edge
+            ox = 0.04 + Double(h % 220) / 1000
+            oy = Double(h2 % 1000) / 1000
+        case 1: // right edge
+            ox = 0.78 + Double(h % 200) / 1000
+            oy = Double(h2 % 1000) / 1000
+        case 2: // top band
+            ox = Double(h % 1000) / 1000
+            oy = 0.04 + Double(h2 % 200) / 1000
+        default: // bottom band
+            ox = Double(h % 1000) / 1000
+            oy = 0.72 + Double(h2 % 250) / 1000
+        }
         let sizeBucket = h % 10
         let radius: CGFloat = switch sizeBucket {
-        case 0, 1: 0.7
-        case 2, 3, 4: 1.2
-        case 5, 6, 7: 1.9
-        case 8: 2.6
-        default: 3.4
+        case 0, 1: 1.4
+        case 2, 3, 4: 2.2
+        case 5, 6, 7: 3.2
+        case 8: 4.2
+        default: 5.5
         }
-        let opacity = 0.07 + Double(h % 14) / 100
-        // Slow fairy drift — 18–40s orbits.
+        // Noticeable but still soft (was ~0.07–0.21 — too faint on device).
+        let opacity = 0.22 + Double(h % 20) / 100
         let periodX = 18.0 + Double(h % 17)
         let periodY = 22.0 + Double(h2 % 19)
-        let ampScale = 0.012 + CGFloat(h % 10) / 900
+        let ampScale = 0.018 + CGFloat(h % 10) / 700
         return Spec(
             seed: index,
             origin: CGPoint(x: ox, y: oy),
@@ -236,14 +254,13 @@ private enum AtmosphereMotes {
     }
 
     static func color(_ mote: Spec, mood: AtmosphereMood) -> Color {
-        // Warm / cool tints stay quiet so they don’t fight the near-original wash.
         switch mood {
         case .idle:
-            Color(red: 1.0, green: 0.96, blue: 0.88).opacity(mote.opacity)
+            Color(red: 1.0, green: 0.97, blue: 0.90).opacity(mote.opacity)
         case .asleep:
-            Color(red: 0.85, green: 0.90, blue: 1.0).opacity(mote.opacity * 0.88)
+            Color(red: 0.88, green: 0.92, blue: 1.0).opacity(mote.opacity * 0.95)
         case .night:
-            Color(red: 0.72, green: 0.80, blue: 1.0).opacity(mote.opacity * 0.70)
+            Color(red: 0.78, green: 0.85, blue: 1.0).opacity(mote.opacity * 0.85)
         }
     }
 }
