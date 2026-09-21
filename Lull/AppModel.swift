@@ -108,19 +108,21 @@ final class AppModel {
     // MARK: - Timer
 
     func startSleep(at startedAt: Date? = nil, location: SleepLocation? = nil) {
-        perform { service in
+        let ok = perform { service in
             try service.startSleep(at: startedAt ?? Date(), location: location)
         }
+        if ok { Self.playSoftTimerHaptic() }
     }
 
     func stopSleep() {
-        perform { service in
+        let ok = perform { service in
             let result = try service.stopSleep(at: Date())
             self.lastStopResult = result
             if let prediction = result.prediction {
                 try service.recordShownPrediction(prediction)
             }
         }
+        if ok { Self.playSoftTimerHaptic() }
     }
 
     func adjustActiveStart(to date: Date) {
@@ -293,14 +295,25 @@ final class AppModel {
         hasCustomBabyAvatar = BabyAvatarStore.hasCustomAvatar
     }
 
-    private func perform(_ work: (SleepService) throws -> Void) {
-        guard let service else { return }
+    /// Soft confirmation when the sleep timer successfully starts or stops.
+    /// `UIImpactFeedbackGenerator` honors system haptic settings.
+    private static func playSoftTimerHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.prepare()
+        generator.impactOccurred(intensity: 0.7)
+    }
+
+    @discardableResult
+    private func perform(_ work: (SleepService) throws -> Void) -> Bool {
+        guard let service else { return false }
         do {
             try work(service)
             now = Date()
             refreshDerived()
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
