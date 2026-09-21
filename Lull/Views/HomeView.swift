@@ -213,7 +213,7 @@ struct HomeView: View {
 
     /// Same chrome as `PredictionBlock` — existing Started clock in the top slot.
     /// Primary hold+drag scrub target (also mirrored on “Asleep for”).
-    /// While adjusting, the clock becomes an Alarm-style ghost minute wheel.
+    /// While adjusting, the clock becomes a single-column ghost minute wheel.
     private var sleepingStartedBlock: some View {
         let startedAt = startScrub.draftStartedAt ?? model.activeSleep?.startedAt ?? model.now
         return VStack(spacing: 0) {
@@ -226,9 +226,9 @@ struct HomeView: View {
                     StartTimeScrubWheel(
                         center: startedAt,
                         fractionalOffset: startScrub.wheelFractionalOffset,
-                        timeZone: model.timeZone
+                        format: { model.formattedClock($0) }
                     )
-                    .padding(.top, 2)
+                    .padding(.top, 4)
                 } else {
                     Text(model.formattedClock(startedAt))
                         .font(.system(size: 40, weight: .semibold, design: .rounded))
@@ -241,8 +241,8 @@ struct HomeView: View {
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, startScrub.isAdjusting ? 10 : 18)
-        .padding(.vertical, startScrub.isAdjusting ? 10 : 16)
+        .padding(.horizontal, 18)
+        .padding(.vertical, startScrub.isAdjusting ? 12 : 16)
         .background(
             Color.white.opacity(startScrub.isAdjusting ? 0.09 : 0.05),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)

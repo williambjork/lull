@@ -163,50 +163,43 @@ extension View {
     }
 }
 
-// MARK: - Alarm-style two-column hour / minute picker
+// MARK: - Ghost clock wheel (first hold-scrub look)
 
-/// In-place Alarm “Edit Alarm” feel: hours | minutes columns, center selection
-/// band, many faded ghost rows, soft top/bottom mask. Driven by the existing
-/// hold-drag minute scrub (not a system picker).
+/// In-place clock column: crisp center time, faded ±2 neighbors above/below,
+/// soft gradient mask at the edges. Driven by UIKit hold-drag minute scrub.
 struct StartTimeScrubWheel: View {
     let center: Date
     /// Continuous residual after snap (−0.5…0.5); positive → column shifts down
-    /// (earlier values from above move toward center).
+    /// (earlier times from above move toward center).
     var fractionalOffset: Double = 0
-    var timeZone: TimeZone = .current
+    var format: (Date) -> String
 
-    private let neighborCount = 5
-    private let rowHeight: CGFloat = 32
-    private let columnSpacing: CGFloat = 40
+    private let neighborCount = 2
+    private let rowHeight: CGFloat = 40
 
     var body: some View {
-        let parts = Self.hourMinute(from: center, timeZone: timeZone)
-        let hourFrac = Self.hourFractionalOffset(minute: parts.minute, fractional: fractionalOffset)
+        let rows = (-neighborCount...neighborCount).map { $0 }
 
         ZStack {
-            // Translucent selection capsule across both columns (Alarm center band).
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(Color.white.opacity(0.16))
-                .frame(height: rowHeight + 8)
-                .padding(.horizontal, 4)
-
-            HStack(spacing: columnSpacing) {
-                ScrubDigitColumn(
-                    centerValue: parts.hour,
-                    modulus: 24,
-                    fractionalOffset: hourFrac,
-                    neighborCount: neighborCount,
-                    rowHeight: rowHeight
-                )
-                ScrubDigitColumn(
-                    centerValue: parts.minute,
-                    modulus: 60,
-                    fractionalOffset: fractionalOffset,
-                    neighborCount: neighborCount,
-                    rowHeight: rowHeight
-                )
+            ForEach(rows, id: \.self) { offset in
+                let date = center.addingTimeInterval(TimeInterval(-offset * 60))
+                let distance = abs(offset)
+                Text(format(date))
+                    .font(.system(
+                        size: distance == 0 ? 40 : 32,
+                        weight: distance == 0 ? .semibold : .regular,
+                        design: .rounded
+                    ))
+                    .monospacedDigit()
+                    .foregroundStyle(color(for: distance))
+                    .opacity(opacity(for: distance))
+                    .scaleEffect(distance == 0 ? 1 : 0.92)
+                    .frame(height: rowHeight)
+                    // Earlier (positive offset) sits above; later below.
+                    // fractionalOffset shifts the column during inter-minute drag.
+                    .offset(y: CGFloat(-offset) * rowHeight + CGFloat(fractionalOffset) * rowHeight)
+                    .zIndex(distance == 0 ? 1 : 0)
             }
-            .padding(.horizontal, 16)
         }
         .frame(height: rowHeight * CGFloat(neighborCount * 2 + 1))
         .frame(maxWidth: .infinity)
@@ -214,12 +207,10 @@ struct StartTimeScrubWheel: View {
             LinearGradient(
                 stops: [
                     .init(color: .clear, location: 0),
-                    .init(color: .black.opacity(0.08), location: 0.08),
-                    .init(color: .black.opacity(0.45), location: 0.22),
-                    .init(color: .black, location: 0.38),
-                    .init(color: .black, location: 0.62),
-                    .init(color: .black.opacity(0.45), location: 0.78),
-                    .init(color: .black.opacity(0.08), location: 0.92),
+                    .init(color: .black.opacity(0.55), location: 0.14),
+                    .init(color: .black, location: 0.32),
+                    .init(color: .black, location: 0.68),
+                    .init(color: .black.opacity(0.55), location: 0.86),
                     .init(color: .clear, location: 1)
                 ],
                 startPoint: .top,
@@ -229,76 +220,16 @@ struct StartTimeScrubWheel: View {
         .accessibilityHidden(true)
     }
 
-    private static func hourMinute(from date: Date, timeZone: TimeZone) -> (hour: Int, minute: Int) {
-        var calendar = Calendar.current
-        calendar.timeZone = timeZone
-        return (
-            calendar.component(.hour, from: date),
-            calendar.component(.minute, from: date)
-        )
-    }
-
-    /// Hours only ease when minutes wrap across the hour boundary.
-    private static func hourFractionalOffset(minute: Int, fractional: Double) -> Double {
-        if minute == 0, fractional > 0 { return fractional }
-        if minute == 59, fractional < 0 { return fractional }
-        return 0
-    }
-}
-
-/// One Alarm-style digit column (hour or minute) with ghost neighbors.
-private struct ScrubDigitColumn: View {
-    let centerValue: Int
-    let modulus: Int
-    var fractionalOffset: Double
-    let neighborCount: Int
-    let rowHeight: CGFloat
-
-    var body: some View {
-        let rows = (-neighborCount...neighborCount).map { $0 }
-
-        ZStack {
-            ForEach(rows, id: \.self) { offset in
-                // Positive offset = earlier (above): value decreases.
-                let value = wrapped(centerValue - offset)
-                let visualDistance = Double(offset) - fractionalOffset
-                let distance = abs(visualDistance)
-
-                Text(String(format: "%02d", value))
-                    .font(.system(
-                        size: fontSize(for: distance),
-                        weight: distance < 0.5 ? .semibold : .regular,
-                        design: .rounded
-                    ))
-                    .monospacedDigit()
-                    .foregroundStyle(Color.white)
-                    .opacity(opacity(for: distance))
-                    .frame(height: rowHeight)
-                    .offset(y: CGFloat(-offset) * rowHeight + CGFloat(fractionalOffset) * rowHeight)
-            }
+    private func opacity(for distance: Int) -> Double {
+        switch distance {
+        case 0: 1
+        case 1: 0.38
+        default: 0.16
         }
-        .frame(width: 56, height: rowHeight * CGFloat(neighborCount * 2 + 1))
     }
 
-    private func wrapped(_ value: Int) -> Int {
-        let m = modulus
-        return ((value % m) + m) % m
-    }
-
-    private func fontSize(for distance: Double) -> CGFloat {
-        if distance < 0.5 { return 38 }
-        if distance < 1.5 { return 26 }
-        if distance < 2.5 { return 22 }
-        if distance < 3.5 { return 18 }
-        return 16
-    }
-
-    /// Aggressive Alarm-like falloff — edge rows nearly vanish (mask finishes them).
-    private func opacity(for distance: Double) -> Double {
-        if distance < 0.5 { return 1 }
-        // ~0.40 at ±1, ~0.16 at ±2, ~0.06 at ±3, ~0.025 at ±4+
-        let d = distance - 0.5
-        return max(0.02, 0.55 * exp(-1.05 * d))
+    private func color(for distance: Int) -> Color {
+        distance == 0 ? Theme.asleepAccent : Color.white.opacity(0.85)
     }
 }
 
